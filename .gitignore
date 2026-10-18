@@ -3,6 +3,9 @@ node_modules/
 *.log
 .DS_Store
 
+# 本地测试脚本与 node-karin 桩（只留本机，不提交）
+test/
+
 # 本地预览 / 截图 / 测试临时产物（统一放 dev/，不要写到系统临时目录）
 dev/
 

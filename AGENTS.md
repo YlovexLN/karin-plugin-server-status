@@ -32,7 +32,7 @@
 - 对外命名保持中性：包名、指令、配置键、截图品牌都不出现上游产品名。
   上游产品名只允许出现在 `src/client.js` 的注释、README 的「兼容性」「数据源准备」章节，以及本文件。
 - 仓库没有 ESLint / Prettier / CI；验证靠 `pnpm check`（`node --check` + `tsc`）、`pnpm build:web` 与 `test/` 下的脚本。
-- **测试脚本一律提交在 `test/`，临时产物一律写在本地目录 `dev/`（整个目录被 git 忽略）**：临时内容统一用 `dev/.tmp-*/`，验证结束立即删除；
+- **`test/` 与 `dev/` 都是本地目录（`test/` 放测试脚本，`dev/` 放生成产物），整个被 git 忽略，不随仓库或 npm 包发布**：临时内容统一用 `dev/.tmp-*/`，验证结束立即删除；
   禁止写到系统临时目录、用户目录或项目外路径，也不要把调试脚本留在 C 盘 / `%TEMP%`。
 - 不要使用高于 Node 18 的运行时 API（如 `Object.groupBy`、`Promise.withResolvers`、`Array.prototype.toSorted`）；
   本机测试版本可能更高，但插件要能在 18 上跑；前端构建脚本不受此限制。
@@ -81,7 +81,7 @@ docs/               README 预览图（preview*.png）；会随 npm 包发布，
   memory/           项目背景、决策记录、术语表
   prompts/          Prompt 模板
   tools/            工具 / MCP / 权限配置
-test/               测试脚本与 node-karin 桩（提交，不随插件发布）
+test/               本地测试脚本与 node-karin 桩（整个被 git 忽略，不随插件发布）
   preview.mjs       本地预览 HTML 生成脚本（产物写到 dev/）
   test-*.mjs        状态机 / API / 集成冒烟测试
   stub/node-karin/  集成测试用的极简 node-karin 桩（含 express.js 子路径桩）
@@ -579,7 +579,7 @@ node test/preview.mjs
 
 ### 测试
 
-- **测试文件位置**：测试脚本放 `test/`（随仓库提交）；mock 服务、浏览器配置、截图、临时工作目录等放本地 `dev/.tmp-*/`（整个 `dev/` 已被 git 忽略）。禁止写到 `%TEMP%`、用户目录或 C 盘其他位置，验证结束立即删除临时目录。
+- **测试文件位置**：测试脚本放 `test/`（本地，不提交）；mock 服务、浏览器配置、截图、临时工作目录等放本地 `dev/.tmp-*/`（`test/` 与 `dev/` 都已被 git 忽略）。禁止写到 `%TEMP%`、用户目录或 C 盘其他位置，验证结束立即删除临时目录。
 - **集成测试与真实 node-karin 冲突**：检测到 `node_modules/node-karin` 不是桩会中止测试；先移除或换干净目录。
 - **不要并行**：测试共享 `node_modules`、`dev/.tmp-run` 和 `process.chdir`。
 - **chdir 顺序**：集成测试先 `process.chdir(tempDir)` 再 import 插件；`karinPath` 在模块加载时计算，顺序错了会写错目录。
@@ -625,7 +625,7 @@ node test/preview.mjs
 
 ## 17. 提交约定
 
-- 不提交：`node_modules/`、`@karinjs/`、`*.log`、`.DS_Store`、`dev/`（整个本地目录，含 `.tmp-*` / `preview-*` / 截图 / 浏览器配置）、`web-dist/`（见 `.gitignore`）。
+- 不提交：`node_modules/`、`@karinjs/`、`*.log`、`.DS_Store`、`test/`（本地测试脚本与 node-karin 桩）、`dev/`（整个本地目录，含 `.tmp-*` / `preview-*` / 截图 / 浏览器配置）、`web-dist/`（见 `.gitignore`）。
 - `.gitattributes` 固定 `* text=auto eol=lf`：入库与工作区都用 LF，图片等二进制资源标记为 `binary`；
   开发机是 Windows（`core.autocrlf=true`）也不要改回 CRLF，否则会产生无意义的换行 diff。
 - `pnpm-lock.yaml` 要提交；不要手改锁文件，用 `pnpm install` 更新。

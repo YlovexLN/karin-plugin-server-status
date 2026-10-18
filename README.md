@@ -56,8 +56,8 @@ karin-plugin-server-status/
 ├── web.config.js         # Karin 插件 WebUI 声明（karin.web）
 ├── config/config.json    # 默认配置（首次启动复制到 @karinjs）
 ├── docs/                 # 预览图
-├── test/                 # 测试脚本与 node-karin 桩（不参与运行）
-└── dev/                  # 本地预览 / 截图 / 临时产物（git 忽略）
+├── test/                 # 本地测试脚本与 node-karin 桩（不提交，见「本地开发」）
+└── dev/                  # 本地预览 / 截图 / 临时产物（不提交）
 ```
 
 ## 安装
@@ -296,6 +296,9 @@ apt install -y fonts-noto-cjk
 自带通知通常需要逐个配置 Webhook，且无法生成整页状态图。本插件通过公开状态页接口统一拉取，配置更简单，也便于在 QQ 群内直接查询。
 
 ## 本地开发
+
+> `test/` 与 `dev/` 都是本地目录，不随仓库与 npm 包发布：`test/` 放测试脚本，`dev/` 放生成的预览 / 截图 / 临时产物。
+> 因此克隆仓库后 `pnpm test` 会因缺少 `test/` 而失败；前端构建与 `pnpm check` 不受影响。
 
 ```bash
 # 安装依赖（含前端构建工具）
