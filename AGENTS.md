@@ -385,9 +385,9 @@ node test/preview.mjs
 
 | 字段 | 规则 |
 | --- | --- |
-| `interval` | `max(30, Number(v) || 60)` |
-| `timeout` | `max(1000, Number(v) || 10000)` |
-| `sourceDownRetries` | `max(1, Number(v) || 3)` |
+| `interval` | `max(30, Number(v) \|\| 60)` |
+| `timeout` | `max(1000, Number(v) \|\| 10000)` |
+| `sourceDownRetries` | `max(1, Number(v) \|\| 3)` |
 | `maxHeartbeats` | clamp(10, 100)，默认 50 |
 | `width` | clamp(600, 1600)，默认 1000 |
 | `deviceScaleFactor` | clamp(1, 4)，默认 2 |
@@ -495,6 +495,8 @@ node test/preview.mjs
 7. 单监控项详情图（`buildMonitorHtml`）刻意比状态图紧凑，只有三段：标题 → 一张卡片 → 一行页脚。
    - 卡片上半行是「状态图标 + 状态文字 + `平均响应 … · 异常 N 次` + 可用率徽章」，字号 25px / 700；
      右侧指标用 14px 的 secondary 色，靠 `margin-left: auto` 顶到徽章左边；下半行是心跳条，`margin-top: 14px`。
+   - 心跳条靠右对齐（`justify-content: flex-end`），最新一根与徽章右边缘齐平；槽位数仍是 `beatSlots(width)`，
+     左侧留出的空档正好表示「再早没有数据」。
    - 文字与心跳条必须留在同一张卡片里（`.detail-card`），不要再拆成两张卡片分层。
    - 不要再加回四宫格统计卡：可用率已经在徽章、异常次数已经在卡片右上，加回去就是重复；`最近响应` 信息量低也一并去掉。
    - 标题 26px / 500、副标题 13px、页脚 13px，卡片内边距 16px 20px，各段间距统一 16px。

@@ -294,7 +294,7 @@ const baseCss = (theme) => {
   .detail-card { padding: 16px 20px; }
   .detail-head { display: flex; align-items: center; gap: 10px; font-size: 25px; font-weight: 700; }
   .detail-meta { margin-left: auto; font-size: 14px; font-weight: 400; color: ${vars.muted}; }
-  .detail-card .beats { margin-top: 14px; }
+  .detail-card .beats { margin-top: 14px; justify-content: flex-end; }
   .detail-ft { margin: 16px 0 12px; text-align: center; font-size: 13px; color: ${vars.muted}; }
   .ft { margin-top: 48px; margin-bottom: 24px; text-align: center; font-size: 14px; }
   .ft p { margin-bottom: 16px; }
