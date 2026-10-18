@@ -265,7 +265,7 @@ const baseCss = (theme) => {
     padding: 24px; margin-bottom: 24px;
     font-size: 25px; font-weight: 700;
   }
-  .overall .icon, .detail-status .icon { display: flex; align-items: center; flex: 0 0 auto; }
+  .overall .icon, .detail-head .icon { display: flex; align-items: center; flex: 0 0 auto; }
   .desc { padding: 8px; margin-bottom: 16px; white-space: pre-line; }
   .group { margin-bottom: 48px; }
   .group-title { font-size: 26px; font-weight: 500; line-height: 1.2; }
@@ -288,14 +288,14 @@ const baseCss = (theme) => {
   }
   .beat.empty { background: ${vars.beatEmpty}; }
   .empty-tip { position: absolute; left: 0; top: 20px; width: 100%; text-align: center; }
-  /* 单监控项详情图：只保留标题、状态卡、心跳条与一行页脚，尺寸比状态图更紧凑 */
+  /* 单监控项详情图：文字在上、心跳条在下，共用同一张卡片，整体比状态图紧凑 */
   .detail-title { font-size: 26px; font-weight: 500; line-height: 1.2; margin-bottom: 6px; }
   .detail-sub { margin: 0 0 16px; font-size: 13px; color: ${vars.muted}; }
-  .detail-status { display: flex; align-items: center; gap: 10px; padding: 16px 20px; font-size: 25px; font-weight: 700; }
+  .detail-card { padding: 16px 20px; }
+  .detail-head { display: flex; align-items: center; gap: 10px; font-size: 25px; font-weight: 700; }
   .detail-meta { margin-left: auto; font-size: 14px; font-weight: 400; color: ${vars.muted}; }
-  .detail-beats { margin-top: 16px; padding: 12px 15px; }
-  .detail-beats .beats { margin-top: 0; }
-  .detail-ft { margin: 24px 0 12px; text-align: center; font-size: 13px; color: ${vars.muted}; }
+  .detail-card .beats { margin-top: 14px; }
+  .detail-ft { margin: 16px 0 12px; text-align: center; font-size: 13px; color: ${vars.muted}; }
   .ft { margin-top: 48px; margin-bottom: 24px; text-align: center; font-size: 14px; }
   .ft p { margin-bottom: 16px; }
   .refresh-info { opacity: .7; }
@@ -437,8 +437,8 @@ export const buildStatusHtml = (snapshot, options = {}) => {
 /**
  * 生成单个监控项详情图 HTML
  *
- * 只保留四段：标题、状态卡（状态 + 平均响应 / 异常次数 + 可用率徽章）、心跳条、一行页脚。
- * 页面宽度比状态图窄不了多少，但纵向尽量收紧，避免在聊天窗口里占满一屏。
+ * 结构只有标题、一张卡片（上半行是状态 + 平均响应 / 异常次数 + 可用率徽章，下半是心跳条）和一行页脚；
+ * 页面宽度与状态图相同，但纵向尽量收紧，避免在聊天窗口里占满一屏。
  * @param {any} monitor 监控项
  * @param {any} snapshot 快照（当前详情图不需要，保留参数以兼容调用方）
  * @param {{ theme?: string, timezone?: string, width?: number, maxHeartbeats?: number }} [options]
@@ -478,13 +478,13 @@ export const buildMonitorHtml = (monitor, snapshot, options = {}) => {
   <div class="page">
     <h1 class="detail-title">${name}</h1>
     <div class="detail-sub">${subParts.map((part) => escapeHtml(part)).join(' · ')}</div>
-    <div class="shadow-box detail-status">
-      <span class="icon">${svgIcon(status.icon, status.color, vars.card, 24)}</span>
-      <span>${status.label}</span>
-      <span class="detail-meta">平均响应 ${formatPing(monitor.avgPing)} · 异常 ${downCount} 次</span>
-      <span class="badge" style="background:${badgeBg};color:${badgeFg}">${formatUptime(monitor.uptime24)}</span>
-    </div>
-    <div class="shadow-box detail-beats">
+    <div class="shadow-box detail-card">
+      <div class="detail-head">
+        <span class="icon">${svgIcon(status.icon, status.color, vars.card, 24)}</span>
+        <span>${status.label}</span>
+        <span class="detail-meta">平均响应 ${formatPing(monitor.avgPing)} · 异常 ${downCount} 次</span>
+        <span class="badge" style="background:${badgeBg};color:${badgeFg}">${formatUptime(monitor.uptime24)}</span>
+      </div>
       <div class="beats">${buildBeats(beats, slots, options)}</div>
     </div>
     <footer class="detail-ft">最后检测 ${lastCheck}</footer>
