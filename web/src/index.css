@@ -1,0 +1,81 @@
+@import 'tailwindcss';
+@import '@heroui/styles';
+
+@layer base {
+  html,
+  body,
+  #root {
+    min-height: 100%;
+  }
+
+  body {
+    background: var(--background);
+    color: var(--foreground);
+    font-family: 'HarmonyOS Sans SC', 'Noto Sans SC', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+}
+
+/* 细滚动条，和 Karin 主 Web 保持一致 */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in oklab, var(--foreground) 18%, transparent) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+*::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--foreground) 18%, transparent);
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* 玻璃质感面板 */
+.glass-panel {
+  background: color-mix(in oklab, var(--background) 78%, transparent);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+/* 配置页入场动画由 GSAP 接管，这里只处理首次挂载前的隐藏 */
+[data-config-section] {
+  will-change: transform, opacity;
+}
+
+/* 标签输入 */
+.tag-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--foreground);
+  background: color-mix(in oklab, var(--foreground) 8%, transparent);
+  border: 1px solid color-mix(in oklab, var(--foreground) 10%, transparent);
+}
+
+.tag-chip button {
+  color: color-mix(in oklab, var(--foreground) 55%, transparent);
+  transition: color 0.15s ease;
+}
+
+.tag-chip button:hover {
+  color: var(--danger);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
+}

@@ -1,0 +1,10 @@
+node_modules/
+@karinjs/
+*.log
+.DS_Store
+
+# 本地预览 / 截图 / 测试临时产物（统一放 dev/，不要写到系统临时目录）
+dev/
+
+# 前端构建产物（由 pnpm build:web 生成，发布前构建）
+web-dist/

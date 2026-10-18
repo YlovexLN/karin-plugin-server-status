@@ -1,0 +1,23 @@
+{
+  "enable": true,
+  "statusUrl": "http://127.0.0.1:3001",
+  "statusSlug": "default",
+  "interval": 60,
+  "timeout": 10000,
+  "targets": [],
+  "fallbackToMaster": true,
+  "notifyOnStart": false,
+  "alertOnPending": false,
+  "notifyRecovery": true,
+  "repeatInterval": 30,
+  "notifySourceDown": true,
+  "sourceDownRetries": 3,
+  "onlyMonitors": [],
+  "ignoreMonitors": [],
+  "enableImage": true,
+  "maxHeartbeats": 50,
+  "theme": "dark",
+  "width": 1000,
+  "deviceScaleFactor": 2,
+  "timezone": ""
+}
