@@ -17,7 +17,7 @@
   "enableImage": true,
   "maxHeartbeats": 50,
   "theme": "dark",
-  "width": 1000,
+  "width": 700,
   "deviceScaleFactor": 2,
   "timezone": ""
 }

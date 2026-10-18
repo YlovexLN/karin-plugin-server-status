@@ -281,7 +281,11 @@ const baseCss = (theme) => {
     flex: 1 1 auto; min-width: 0; padding: 0 5px;
     display: inline-block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   }
-  .beats { display: flex; align-items: center; gap: ${BEAT_GAP}px; height: ${BEAT_HEIGHT}px; margin-top: 12px; }
+  /* space-between 让首尾两根心跳条分别贴住容器左右内边距，与上方徽章 / 名称行严格对齐 */
+  .beats {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: ${BEAT_GAP}px; height: ${BEAT_HEIGHT}px; margin-top: 12px;
+  }
   .beat {
     flex: 0 0 ${BEAT_WIDTH}px; width: ${BEAT_WIDTH}px; height: ${BEAT_HEIGHT}px;
     border-radius: ${BEAT_RADIUS}px;
@@ -294,8 +298,10 @@ const baseCss = (theme) => {
   .detail-card { padding: 16px 20px; }
   .detail-head { display: flex; align-items: center; gap: 10px; font-size: 25px; font-weight: 700; }
   .detail-meta { margin-left: auto; font-size: 14px; font-weight: 400; color: ${vars.muted}; }
-  .detail-card .beats { margin-top: 14px; justify-content: flex-end; }
-  .detail-ft { margin: 16px 0 12px; text-align: center; font-size: 13px; color: ${vars.muted}; }
+  .detail-card .beats { margin-top: 14px; }
+  .detail-ft { margin: 14px 0 10px; text-align: center; font-size: 13px; }
+  .detail-ft p { margin-bottom: 4px; }
+  .detail-ft .refresh-info { opacity: .7; }
   .ft { margin-top: 48px; margin-bottom: 24px; text-align: center; font-size: 14px; }
   .ft p { margin-bottom: 16px; }
   .refresh-info { opacity: .7; }
@@ -370,7 +376,7 @@ const buildMonitorRow = (monitor, slots, options) => {
 export const buildStatusHtml = (snapshot, options = {}) => {
   const theme = options.theme === 'light' ? 'light' : 'dark'
   const vars = themeVars(theme)
-  const width = Number(options.width) || 1000
+  const width = Number(options.width) || 700
   const slots = beatSlots(width)
   const summary = snapshot.summary || {}
   const overall = OVERALL_META[summary.overall] || OVERALL_META.unknown
@@ -437,7 +443,7 @@ export const buildStatusHtml = (snapshot, options = {}) => {
 /**
  * 生成单个监控项详情图 HTML
  *
- * 结构只有标题、一张卡片（上半行是状态 + 平均响应 / 异常次数 + 可用率徽章，下半是心跳条）和一行页脚；
+ * 结构只有标题、一张卡片（上半行是状态 + 平均响应 / 异常次数 + 可用率徽章，下半是心跳条）和页脚（插件名 + 最后检测时间）；
  * 页面宽度与状态图相同，但纵向尽量收紧，避免在聊天窗口里占满一屏。
  * @param {any} monitor 监控项
  * @param {any} snapshot 快照（当前详情图不需要，保留参数以兼容调用方）
@@ -446,7 +452,7 @@ export const buildStatusHtml = (snapshot, options = {}) => {
 export const buildMonitorHtml = (monitor, snapshot, options = {}) => {
   const theme = options.theme === 'light' ? 'light' : 'dark'
   const vars = themeVars(theme)
-  const width = Number(options.width) || 1000
+  const width = Number(options.width) || 700
   const slots = beatSlots(width)
   const meta = monitor.status === null ? null : STATUS_META[monitor.status]
   const status = meta || { key: 'unknown', label: '无数据', en: 'No Data', color: NEUTRAL_COLOR, icon: 'question-circle' }
@@ -487,7 +493,10 @@ export const buildMonitorHtml = (monitor, snapshot, options = {}) => {
       </div>
       <div class="beats">${buildBeats(beats, slots, options)}</div>
     </div>
-    <footer class="detail-ft">最后检测 ${lastCheck}</footer>
+    <footer class="detail-ft">
+      <p>karin-plugin-server-status</p>
+      <div class="refresh-info">最后检测 ${lastCheck}</div>
+    </footer>
   </div>
 </body>
 </html>`

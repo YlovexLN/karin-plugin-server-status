@@ -81,8 +81,8 @@ export const defaultConfig = {
   maxHeartbeats: 50,
   /** 截图主题：dark / light */
   theme: 'dark',
-  /** 截图宽度（px） */
-  width: 1000,
+  /** 截图宽度（px），实际视窗为 width + 28×2 */
+  width: 700,
   /** 截图缩放倍率，越大越清晰、文件越大 */
   deviceScaleFactor: 2,
   /** 截图内的时间时区，如 Asia/Shanghai，留空使用系统时区 */
@@ -149,7 +149,7 @@ export const getConfig = () => {
   cfg.timeout = Math.max(1000, Number(cfg.timeout) || 10000)
   cfg.sourceDownRetries = Math.max(1, Number(cfg.sourceDownRetries) || 3)
   cfg.maxHeartbeats = Math.min(100, Math.max(10, Number(cfg.maxHeartbeats) || 50))
-  cfg.width = Math.min(1600, Math.max(600, Number(cfg.width) || 1000))
+  cfg.width = Math.min(1600, Math.max(600, Number(cfg.width) || 700))
   cfg.deviceScaleFactor = Math.min(4, Math.max(1, Number(cfg.deviceScaleFactor) || 2))
   cfg.theme = cfg.theme === 'light' ? 'light' : 'dark'
   if (!Array.isArray(cfg.targets)) cfg.targets = []

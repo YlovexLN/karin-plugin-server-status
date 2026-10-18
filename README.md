@@ -150,7 +150,7 @@ npm 包发布时由 `prepublishOnly` 自动构建并包含 `web-dist/`；直接 
 | `enableImage` | boolean | `true` | 是否附带状态截图 |
 | `maxHeartbeats` | number | `50` | 截图中最多展示的心跳格数（10–100） |
 | `theme` | string | `dark` | 截图主题：`dark` / `light` |
-| `width` | number | `1000` | 截图宽度（px） |
+| `width` | number | `700` | 截图宽度（px），实际视窗为 `width + 56` |
 | `deviceScaleFactor` | number | `2` | 截图缩放倍率，越大越清晰 |
 | `timezone` | string | `""` | 截图时间时区，如 `Asia/Shanghai`；留空用系统时区 |
 

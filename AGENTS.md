@@ -389,7 +389,7 @@ node test/preview.mjs
 | `timeout` | `max(1000, Number(v) \|\| 10000)` |
 | `sourceDownRetries` | `max(1, Number(v) \|\| 3)` |
 | `maxHeartbeats` | clamp(10, 100)，默认 50 |
-| `width` | clamp(600, 1600)，默认 1000 |
+| `width` | clamp(600, 1600)，默认 700 |
 | `deviceScaleFactor` | clamp(1, 4)，默认 2 |
 | `theme` | 仅 `light` 保留，其他一律 `dark` |
 | `targets` / `onlyMonitors` / `ignoreMonitors` | 非数组 → `[]` |
@@ -477,9 +477,13 @@ node test/preview.mjs
 1. 改 `src/template.js` 的纯函数；不要在这里 import `node-karin`。
 2. 跑 `node test/preview.mjs` 检查排版、长名称、100 条心跳、浅色 / 深色主题。
 3. 视觉改动后重新生成 README 用的 `docs/preview.png` / `docs/preview-detail.png`（本地生成的 `dev/preview-*` 不要提交）。
-4. 注意 `body` 的 28px 内边距与 `.page` 宽度；改内边距必须同步 `src/render.js` 的 `+ 56` 和集成测试的 `1056` 断言。
+4. 注意 `body` 的 28px 内边距与 `.page` 宽度；改内边距或 `width` 默认值必须同步 `src/render.js` 的 `+ 56`
+   和集成测试的 `756` 断言（默认 `width: 700`）。
 5. 心跳条尺寸固定为 10×30、间距 8，每行槽位数由 `beatSlots(width, 内边距之和)` 算出；改这些常量要同步 `LIST_INNER_PADDING`
    （监控列表卡片 10px + 监控项 15px 的左右内边距），否则心跳条会溢出卡片或右侧留白。
+   `.beats` 用 `justify-content: space-between`，首尾两根分别贴住容器的左 / 右内边距，与上方的徽章 / 名称行严格对齐；
+   `beatSlots` 只决定根数，容器有富余时行间距会从 8px 轻微变大（约 9px），不要改成 `flex-start` / `flex-end`，
+   否则一侧会留下空档。
 6. 视觉参数逐项抄自 Uptime Kuma 状态页，改动前先核对上游源码，不要凭手感调：
    - 配色：深色底 `#090c10`、卡片 `#0d1117`、正文 `#b1b8c0`；浅色为纯白底 + `#212529`；
      状态色 `#5cdd8b` / `#dc3545` / `#f8a306` / `#1747f5`，无数据用 secondary `#6c757d`。
@@ -492,14 +496,16 @@ node test/preview.mjs
    - 排版顺序：标题 → 整体状态卡 → 描述 → 分组；页脚居中、14px，`.refresh-info` 用 `opacity: .7`。
    - 字体栈与正文基准沿用 `#app` 的一套（16px / line-height 1.5），中文回退插在 `sans-serif` 之前。
    改配色或尺寸时同步 README 预览图。
-7. 单监控项详情图（`buildMonitorHtml`）刻意比状态图紧凑，只有三段：标题 → 一张卡片 → 一行页脚。
+7. 单监控项详情图（`buildMonitorHtml`）刻意比状态图紧凑，只有三段：标题 → 一张卡片 → 页脚。
    - 卡片上半行是「状态图标 + 状态文字 + `平均响应 … · 异常 N 次` + 可用率徽章」，字号 25px / 700；
      右侧指标用 14px 的 secondary 色，靠 `margin-left: auto` 顶到徽章左边；下半行是心跳条，`margin-top: 14px`。
-   - 心跳条靠右对齐（`justify-content: flex-end`），最新一根与徽章右边缘齐平；槽位数仍是 `beatSlots(width)`，
-     左侧留出的空档正好表示「再早没有数据」。
+   - 心跳条与上方的状态行共用一个内边距，首尾两根分别与状态图标左边缘、可用率徽章右边缘齐平（靠 `.beats` 的
+     `justify-content: space-between` 实现，不要在这里再覆盖对齐方式）。
    - 文字与心跳条必须留在同一张卡片里（`.detail-card`），不要再拆成两张卡片分层。
    - 不要再加回四宫格统计卡：可用率已经在徽章、异常次数已经在卡片右上，加回去就是重复；`最近响应` 信息量低也一并去掉。
    - 标题 26px / 500、副标题 13px、页脚 13px，卡片内边距 16px 20px，各段间距统一 16px。
+   - 页脚两行：第一行是插件名 `karin-plugin-server-status`（与状态图页脚同一处品牌位，不要改成上游产品名），
+     第二行是 `.refresh-info`（opacity `.7`）里的「最后检测 …」；两行都要居中，行距靠 `.detail-ft p` 的 `margin-bottom: 4px` 控制。
 
 ### 修改告警文案
 
@@ -592,7 +598,7 @@ node test/preview.mjs
 - **不要并行**：测试共享 `node_modules`、`dev/.tmp-run` 和 `process.chdir`。
 - **chdir 顺序**：集成测试先 `process.chdir(tempDir)` 再 import 插件；`karinPath` 在模块加载时计算，顺序错了会写错目录。
 - **计数断言**：新增指令 / 任务要改 `__commands.length` / `__tasks.length`；当前 8 / 1。
-- **视窗断言**：改模板内边距要改 `1056`。
+- **视窗断言**：改模板内边距或 `width` 默认值要改 `756`（= 700 + 56）。
 - **文本断言**：改告警文案要改集成测试里的字符串。
 - **覆盖缺口**：集成测试未覆盖面板恢复、重复提醒、PENDING / 维护、only / ignore、浅色主题、单目标推送失败；改这些逻辑时补单测或手工验证。
 
