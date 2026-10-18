@@ -626,6 +626,8 @@ node test/preview.mjs
 ## 17. 提交约定
 
 - 不提交：`node_modules/`、`@karinjs/`、`*.log`、`.DS_Store`、`dev/`（整个本地目录，含 `.tmp-*` / `preview-*` / 截图 / 浏览器配置）、`web-dist/`（见 `.gitignore`）。
+- `.gitattributes` 固定 `* text=auto eol=lf`：入库与工作区都用 LF，图片等二进制资源标记为 `binary`；
+  开发机是 Windows（`core.autocrlf=true`）也不要改回 CRLF，否则会产生无意义的换行 diff。
 - `pnpm-lock.yaml` 要提交；不要手改锁文件，用 `pnpm install` 更新。
 - README 必须与实现保持一致：指令表、配置表、默认值、消息示例、WebUI 入口与构建命令。
 - 改了本文件描述的约定（目录、命令、分层、计数）时，同步更新 AGENTS.md。

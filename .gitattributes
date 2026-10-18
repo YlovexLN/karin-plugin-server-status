@@ -1,0 +1,13 @@
+# 全仓库统一使用 LF
+# 插件运行时在 Linux（Karin 部署环境）上，开发机多为 Windows；
+# 不做归一化会因为 core.autocrlf 产生 CRLF 工作区与无意义的换行 diff。
+* text=auto eol=lf
+
+# 二进制资源不做换行转换与 diff
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.woff binary
+*.woff2 binary
