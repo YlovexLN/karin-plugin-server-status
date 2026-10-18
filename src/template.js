@@ -265,8 +265,7 @@ const baseCss = (theme) => {
     padding: 24px; margin-bottom: 24px;
     font-size: 25px; font-weight: 700;
   }
-  .overall .icon { display: flex; align-items: center; flex: 0 0 auto; }
-  .overall .spacer { margin-left: auto; }
+  .overall .icon, .detail-status .icon { display: flex; align-items: center; flex: 0 0 auto; }
   .desc { padding: 8px; margin-bottom: 16px; white-space: pre-line; }
   .group { margin-bottom: 48px; }
   .group-title { font-size: 26px; font-weight: 500; line-height: 1.2; }
@@ -289,17 +288,14 @@ const baseCss = (theme) => {
   }
   .beat.empty { background: ${vars.beatEmpty}; }
   .empty-tip { position: absolute; left: 0; top: 20px; width: 100%; text-align: center; }
-  .detail-sub { margin: -16px 0 24px; font-size: 14px; color: ${vars.muted}; }
-  .beats-box { padding: 15px; }
-  .beats-box .beats { margin-top: 0; }
-  .stats {
-    display: grid; grid-template-columns: repeat(4, 1fr);
-    margin-top: 24px; padding: 20px 24px;
-  }
-  .stat { text-align: center; }
-  .stat + .stat { border-left: 1px solid ${theme === 'light' ? 'rgba(33, 37, 41, 0.1)' : 'rgba(177, 184, 192, 0.15)'}; }
-  .stat b { display: block; font-size: 19px; font-weight: 700; }
-  .stat span { display: block; margin-top: 6px; font-size: 12px; color: ${vars.muted}; }
+  /* 单监控项详情图：只保留标题、状态卡、心跳条与一行页脚，尺寸比状态图更紧凑 */
+  .detail-title { font-size: 26px; font-weight: 500; line-height: 1.2; margin-bottom: 6px; }
+  .detail-sub { margin: 0 0 16px; font-size: 13px; color: ${vars.muted}; }
+  .detail-status { display: flex; align-items: center; gap: 10px; padding: 16px 20px; font-size: 25px; font-weight: 700; }
+  .detail-meta { margin-left: auto; font-size: 14px; font-weight: 400; color: ${vars.muted}; }
+  .detail-beats { margin-top: 16px; padding: 12px 15px; }
+  .detail-beats .beats { margin-top: 0; }
+  .detail-ft { margin: 24px 0 12px; text-align: center; font-size: 13px; color: ${vars.muted}; }
   .ft { margin-top: 48px; margin-bottom: 24px; text-align: center; font-size: 14px; }
   .ft p { margin-bottom: 16px; }
   .refresh-info { opacity: .7; }
@@ -440,8 +436,11 @@ export const buildStatusHtml = (snapshot, options = {}) => {
 
 /**
  * 生成单个监控项详情图 HTML
+ *
+ * 只保留四段：标题、状态卡（状态 + 平均响应 / 异常次数 + 可用率徽章）、心跳条、一行页脚。
+ * 页面宽度比状态图窄不了多少，但纵向尽量收紧，避免在聊天窗口里占满一屏。
  * @param {any} monitor 监控项
- * @param {any} snapshot 快照
+ * @param {any} snapshot 快照（当前详情图不需要，保留参数以兼容调用方）
  * @param {{ theme?: string, timezone?: string, width?: number, maxHeartbeats?: number }} [options]
  */
 export const buildMonitorHtml = (monitor, snapshot, options = {}) => {
@@ -477,29 +476,18 @@ export const buildMonitorHtml = (monitor, snapshot, options = {}) => {
 </head>
 <body>
   <div class="page">
-    <h1 class="title">${name}</h1>
+    <h1 class="detail-title">${name}</h1>
     <div class="detail-sub">${subParts.map((part) => escapeHtml(part)).join(' · ')}</div>
-    <div class="shadow-box overall">
-      <span class="icon">${svgIcon(status.icon, status.color, vars.card, 26)}</span>
+    <div class="shadow-box detail-status">
+      <span class="icon">${svgIcon(status.icon, status.color, vars.card, 24)}</span>
       <span>${status.label}</span>
-      <span class="spacer"></span>
+      <span class="detail-meta">平均响应 ${formatPing(monitor.avgPing)} · 异常 ${downCount} 次</span>
       <span class="badge" style="background:${badgeBg};color:${badgeFg}">${formatUptime(monitor.uptime24)}</span>
     </div>
-    <div class="shadow-box monitor-list beats-box">
+    <div class="shadow-box detail-beats">
       <div class="beats">${buildBeats(beats, slots, options)}</div>
     </div>
-    <div class="shadow-box stats">
-      <div class="stat"><b>${formatUptime(monitor.uptime24)}</b><span>24 小时可用率</span></div>
-      <div class="stat"><b>${formatPing(monitor.avgPing)}</b><span>平均响应</span></div>
-      <div class="stat"><b>${formatPing(monitor.latest?.ping)}</b><span>最近响应</span></div>
-      <div class="stat"><b>${downCount}</b><span>异常次数</span></div>
-    </div>
-    <footer class="ft">
-      <p>karin-plugin-server-status</p>
-      <div class="refresh-info">
-        <div>最后检测 ${lastCheck} · 异常 ${downCount} 次${snapshot?.slug ? ` · /status/${escapeHtml(snapshot.slug)}` : ''}</div>
-      </div>
-    </footer>
+    <footer class="detail-ft">最后检测 ${lastCheck}</footer>
   </div>
 </body>
 </html>`
