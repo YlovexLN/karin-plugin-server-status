@@ -122,7 +122,7 @@ const summarize = (monitors) => {
  * 把指标样本整理成与状态页一致的快照结构
  *
  * 指标接口没有心跳历史，`heartbeats` / `allHeartbeats` 恒为空数组，
- * 截图里只会画出空槽位；`latest` 仅供「最近响应」展示，`time` 记 0。
+ * 截图里只会画出空槽位；`latest.time` 固定为 `null`（不是 `0`，否则会渲染成 1970）。
  * @param {ReturnType<typeof parsePrometheusText>} samples 解析后的样本
  * @param {{ fetchedAt?: number }} [options]
  */

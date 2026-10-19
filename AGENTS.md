@@ -233,7 +233,7 @@ node test/preview.mjs   # 生成 dev/preview-*，不是测试
 ```
 
 - `pnpm check` 的 `node --check` 文件列表是**显式枚举**的；新增后端 `.js` 必须同步 `package.json` 的 `check` 脚本。
-- 当前基线：`test-engine` 32 通过、`test-api` 61 通过、`test-integration` 122 通过（含指标接口解析 / 合并 / 客户端、WebUI 挂载、配置 API 与推送目标校验断言）。
+- 当前基线：`test-engine` 56 通过、`test-api` 61 通过、`test-integration` 122 通过（含指标接口解析 / 合并 / 客户端、WebUI 挂载、配置 API 与推送目标校验断言）。
 - 三个测试都用内置 `assert` 统计通过 / 失败，失败时 `process.exit(1)`；没有测试框架。
   - `test-engine`：状态迁移、重复提醒、PENDING / 维护、过滤、恢复条件、`notifyOnStart`；不依赖 Karin。
   - `test-api`：接口解析、404 / 非 JSON / 超时、URL 规范化与 slug 优先级、子路径、空数据、UTC 时间解析；
@@ -675,7 +675,7 @@ pnpm preview:web    # 预览构建产物
 
 - [ ] `pnpm check` 通过（后端 `node --check` + 前端 `tsc`）。
 - [ ] `pnpm build:web` 通过，`web-dist/index.html` 与 assets 已生成。
-- [ ] `pnpm test` 全部通过（engine 32 / api 61 / integration 122）。
+- [ ] `pnpm test` 全部通过（engine 56 / api 61 / integration 122）。
 - [ ] 配置项已同步 `defaultConfig`、`config/config.json`、README、本文件、`src/web/validate.js` 与 `web/src/types.ts`。
 - [ ] 指标接口改动已同步 `src/metrics.js`、`src/monitor.js` 的 `loadSnapshot()`、`POST /v1/monitors`、
       `web/src/components/MonitorPicker.tsx`、README「数据源准备」与两个测试脚本。
