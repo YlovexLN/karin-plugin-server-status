@@ -1,5 +1,5 @@
 import { authClient } from './client'
-import type { ApiResponse, Config, ConfigPayload, PushResult, StatePayload } from '../types'
+import type { ApiResponse, Config, ConfigPayload, MonitorListPayload, PushResult, StatePayload } from '../types'
 
 const API_BASE = '/server-status/v1'
 
@@ -31,4 +31,15 @@ export const getState = async (): Promise<StatePayload> => {
 export const testPush = async (): Promise<PushResult> => {
   const response = await authClient.post<ApiResponse<PushResult>>(`${API_BASE}/test-push`)
   return unwrap(response.data, '测试推送失败')
+}
+
+/**
+ * 拉取可监控的监控项列表
+ * - 传入表单里**尚未保存**的连接信息，方便先填密钥再拉列表
+ */
+export const fetchMonitors = async (
+  options: Pick<Config, 'statusUrl' | 'statusSlug' | 'metricsUrl' | 'metricsApiKey' | 'metricsApiUser'>
+): Promise<MonitorListPayload> => {
+  const response = await authClient.post<ApiResponse<MonitorListPayload>>(`${API_BASE}/monitors`, options)
+  return unwrap(response.data, '拉取监控项列表失败')
 }

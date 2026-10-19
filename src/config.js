@@ -52,6 +52,14 @@ export const defaultConfig = {
   statusUrl: 'http://127.0.0.1:3001',
   /** 状态页 slug，即 /status/:slug 中的 slug */
   statusSlug: 'default',
+  /** 是否同时启用指标接口（可监控未公开到状态页的监控项） */
+  metricsEnable: false,
+  /** 指标接口地址，留空则由面板地址自动推导 /metrics */
+  metricsUrl: '',
+  /** 指标接口的 API 密钥（作为 Basic 认证的密码） */
+  metricsApiKey: '',
+  /** 指标接口的 Basic 认证用户名，可任意填写 */
+  metricsApiUser: 'server-status',
   /** 检测间隔（秒），受 cron 限制实际最小为 60 秒 */
   interval: 60,
   /** 请求超时（毫秒） */
@@ -157,6 +165,11 @@ export const getConfig = () => {
   cfg.targets = normalizeTargets(cfg.targets)
   if (!Array.isArray(cfg.onlyMonitors)) cfg.onlyMonitors = []
   if (!Array.isArray(cfg.ignoreMonitors)) cfg.ignoreMonitors = []
+  /** 指标接口：只有开关打开且填了密钥才真正生效 */
+  cfg.metricsEnable = cfg.metricsEnable === true
+  cfg.metricsUrl = String(cfg.metricsUrl || '').trim()
+  cfg.metricsApiKey = String(cfg.metricsApiKey || '').trim()
+  cfg.metricsApiUser = String(cfg.metricsApiUser || '').trim() || 'server-status'
   return cfg
 }
 

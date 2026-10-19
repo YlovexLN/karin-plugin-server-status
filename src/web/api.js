@@ -14,6 +14,8 @@ import {
   createSuccessResponse
 } from 'node-karin'
 import { defaultConfig, dir, getConfig, saveConfig } from '../config.js'
+import { StatusClient } from '../client.js'
+import { MetricsClient } from '../metrics.js'
 import { pushMessage } from '../notify.js'
 import { validateConfigPatch } from './validate.js'
 
@@ -105,7 +107,54 @@ export const testPushHandler = async (_req, res) => {
   }
 }
 
+/**
+ * POST /server-status/v1/monitors
+ * 拉取可监控的监控项列表，供配置页勾选
+ *
+ * 请求体可携带**尚未保存**的指标接口配置，便于「先填密钥、拉列表、再保存」；
+ * 缺省时回退到当前已保存的配置。优先走指标接口（覆盖全部监控项，含未公开的），
+ * 没有密钥时退回状态页（只能列出公开项）。
+ */
+export const listMonitorsHandler = async (req, res) => {
+  const cfg = getConfig()
+  const body = req.body && typeof req.body === 'object' ? req.body : {}
+  const pick = (key) => (typeof body[key] === 'string' && body[key].trim() ? body[key].trim() : cfg[key])
+
+  const options = {
+    metricsEnabled: true,
+    metricsUrl: pick('metricsUrl'),
+    metricsApiKey: pick('metricsApiKey'),
+    metricsApiUser: pick('metricsApiUser'),
+    statusUrl: pick('statusUrl'),
+    statusSlug: pick('statusSlug'),
+    timeout: cfg.timeout
+  }
+
+  if (options.metricsApiKey) {
+    try {
+      const monitors = await new MetricsClient(options).listMonitors()
+      return createSuccessResponse(res, { source: 'metrics', monitors })
+    } catch (error) {
+      return createBadRequestResponse(res, `拉取监控项列表失败：${error?.message || error}`)
+    }
+  }
+
+  try {
+    const snapshot = await new StatusClient(options).getSnapshot()
+    const monitors = snapshot.monitors.map((monitor) => ({
+      id: monitor.id,
+      name: monitor.name,
+      type: monitor.type || '',
+      status: monitor.status
+    }))
+    return createSuccessResponse(res, { source: 'status-page', monitors })
+  } catch (error) {
+    return createBadRequestResponse(res, `拉取监控项列表失败：${error?.message || error}（也可以先填写指标接口的 API 密钥）`)
+  }
+}
+
 apiRouter.get('/config', getConfigHandler)
 apiRouter.post('/config', saveConfigHandler)
 apiRouter.get('/state', getStateHandler)
 apiRouter.post('/test-push', testPushHandler)
+apiRouter.post('/monitors', listMonitorsHandler)

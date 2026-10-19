@@ -20,6 +20,14 @@ export interface Config {
   enable: boolean
   statusUrl: string
   statusSlug: string
+  /** 是否同时启用指标接口（可监控未公开到状态页的监控项） */
+  metricsEnable: boolean
+  /** 指标接口地址，留空自动由面板地址推导 */
+  metricsUrl: string
+  /** 指标接口的 API 密钥（Basic 认证密码） */
+  metricsApiKey: string
+  /** Basic 认证用户名，可任意填写 */
+  metricsApiUser: string
   interval: number
   timeout: number
   targets: PushTarget[]
@@ -85,6 +93,20 @@ export interface StatePayload {
 export interface PushResult {
   total: number
   success: number
+}
+
+/** 可勾选的监控项 */
+export interface MonitorOption {
+  id: string
+  name: string
+  type: string
+  status: number | null
+}
+
+export interface MonitorListPayload {
+  /** metrics = 来自指标接口（含未公开项）；status-page = 只含已公开项 */
+  source: 'metrics' | 'status-page'
+  monitors: MonitorOption[]
 }
 
 export type DeviceLayout = 'desktop' | 'mobile'

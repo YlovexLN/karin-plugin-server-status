@@ -8,17 +8,15 @@
 
 import { karin, segment } from 'node-karin'
 import { getConfig } from '../src/config.js'
-import { StatusClient } from '../src/client.js'
 import { filterSnapshot } from '../src/engine.js'
-import { runCheck } from '../src/monitor.js'
+import { loadSnapshot, runCheck } from '../src/monitor.js'
 import { renderMonitorImage, renderStatusImage } from '../src/render.js'
 import { buildTextReport, formatPing, formatUptime } from '../src/template.js'
 
-/** 拉取并过滤快照 */
+/** 拉取并过滤快照（状态页 + 指标接口，按 ID 合并） */
 const fetchSnapshot = async () => {
   const cfg = getConfig()
-  const client = new StatusClient(cfg)
-  const snapshot = filterSnapshot(await client.getSnapshot(), cfg)
+  const snapshot = filterSnapshot(await loadSnapshot(cfg), cfg)
   return { cfg, snapshot }
 }
 
@@ -45,7 +43,7 @@ export const statusOverview = karin.command(
       const { cfg, snapshot } = await fetchSnapshot()
 
       if (snapshot.summary.total === 0) {
-        await e.reply('状态页中没有公开的监控项，请在监控面板中把分组设为「公开」')
+        await e.reply('没有可展示的监控项：请在监控面板中把分组设为「公开」，或在配置里启用指标接口')
         return true
       }
 
@@ -63,7 +61,7 @@ export const statusOverview = karin.command(
       await e.reply([
         '❌ 获取监控状态失败',
         `原因：${error?.message || error}`,
-        '请检查 config.json 中的 statusUrl、statusSlug 是否正确，以及状态页是否已发布。'
+        '请检查 config.json 中的 statusUrl、statusSlug 是否正确，以及状态页是否已发布；启用指标接口时还要检查 API 密钥。'
       ].join('\n'))
     }
 
@@ -103,7 +101,7 @@ export const statusDetail = karin.command(
       const { cfg, snapshot } = await fetchSnapshot()
 
       if (snapshot.monitors.length === 0) {
-        await e.reply('状态页中没有公开的监控项')
+        await e.reply('没有可展示的监控项')
         return true
       }
 

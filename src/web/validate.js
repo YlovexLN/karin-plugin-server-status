@@ -100,5 +100,20 @@ export const validateConfigPatch = (input) => {
     errors.push('statusUrl 不能为空')
   }
 
+  /** 启用指标接口时必须填密钥，否则每次检测都会退化成只看状态页 */
+  if (patch.metricsEnable === true && patch.metricsApiKey !== undefined && !patch.metricsApiKey) {
+    errors.push('启用指标接口时必须填写 API 密钥')
+  }
+
+  if (patch.metricsUrl !== undefined && patch.metricsUrl) {
+    const raw = /^https?:\/\//i.test(patch.metricsUrl) ? patch.metricsUrl : `http://${patch.metricsUrl}`
+    try {
+      /** 只验证格式，真正的请求在保存后由监控流程发起 */
+      new URL(raw)
+    } catch {
+      errors.push('metricsUrl 不是合法地址')
+    }
+  }
+
   return errors.length ? { ok: false, errors } : { ok: true, patch }
 }

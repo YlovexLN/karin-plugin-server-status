@@ -2,11 +2,13 @@
  * 监控引擎
  *
  * 定时拉取状态页数据，对比上一次状态，产生告警/恢复事件。
+ * 启用指标接口时，两份数据按监控项 ID 合并去重（状态页优先）。
  */
 
 import { logger } from 'node-karin'
 import { dir, getConfig } from './config.js'
 import { StatusClient } from './client.js'
+import { MetricsClient, mergeSnapshots } from './metrics.js'
 import { StateStore } from './state.js'
 import { evaluate, filterSnapshot } from './engine.js'
 import { renderStatusImage } from './render.js'
@@ -36,10 +38,64 @@ let lastResult = {
   error: ''
 }
 
+/** 指标接口未填密钥的提示只打一次 */
+let warnedMetricsNoKey = false
+
 /** 获取状态存储（懒加载） */
 const getStore = () => {
   if (!store) store = new StateStore(dir.stateFile)
   return store
+}
+
+/**
+ * 拉取快照：状态页为主，指标接口为辅
+ *
+ * - 两个数据源都成功时按监控项 ID 合并去重，状态页那份优先（保留分组与心跳条）；
+ * - 只有一个成功时用成功的那个，另一个只记 debug 日志，不触发「面板不可达」告警；
+ * - 全部失败才抛错，交由 `handleSourceFailure()` 处理。
+ * @param {any} cfg 配置
+ * @returns {Promise<any>} 合并后的快照
+ */
+export const loadSnapshot = async (cfg) => {
+  const client = new StatusClient(cfg)
+
+  /** 只有开关打开且填了密钥才请求指标接口 */
+  let metricsClient = null
+  if (cfg.metricsEnable) {
+    if (cfg.metricsApiKey) {
+      metricsClient = new MetricsClient(cfg)
+    } else if (!warnedMetricsNoKey) {
+      warnedMetricsNoKey = true
+      logger.warn('[server-status] 已启用指标接口但未填写 API 密钥，本次只使用状态页数据')
+    }
+  }
+
+  const tasks = [client.getSnapshot()]
+  if (metricsClient) tasks.push(metricsClient.getSnapshot())
+
+  const [statusResult, metricsResult] = await Promise.allSettled(tasks)
+
+  const statusOk = statusResult.status === 'fulfilled'
+  const metricsOk = metricsResult?.status === 'fulfilled'
+
+  if (!statusOk && !metricsOk) {
+    /** 指标接口失败时只把状态页的错误抛给调用方，保持既有告警语义 */
+    throw statusResult.reason
+  }
+
+  if (!statusOk) {
+    logger.debug(`[server-status] 状态页不可用，本次只用指标接口数据：${statusResult.reason?.message || statusResult.reason}`)
+    return metricsResult.value
+  }
+
+  if (!metricsOk) {
+    if (metricsResult) {
+      logger.debug(`[server-status] 指标接口不可用，本次只用状态页数据：${metricsResult.reason?.message || metricsResult.reason}`)
+    }
+    return statusResult.value
+  }
+
+  return mergeSnapshots(statusResult.value, metricsResult.value)
 }
 
 /**
@@ -169,7 +225,7 @@ export const runCheck = async (options = {}) => {
     /** 1. 拉取数据 */
     let rawSnapshot
     try {
-      rawSnapshot = await client.getSnapshot()
+      rawSnapshot = await loadSnapshot(cfg)
     } catch (error) {
       logger.debug(`[server-status] 面板请求失败：${error?.message || error}`)
       const result = await handleSourceFailure(cfg, state, error, client, notify)

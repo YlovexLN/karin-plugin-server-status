@@ -45,6 +45,14 @@ export const validateConfig = (config: Config | null): ConfigErrors => {
     errors.maxHeartbeats = '心跳数量需要在 10 - 100 之间'
   }
 
+  if (config.metricsEnable && !config.metricsApiKey.trim()) {
+    errors.metricsApiKey = '启用指标接口时必须填写 API 密钥'
+  }
+
+  if (config.metricsUrl.trim() && !/^https?:\/\//i.test(config.metricsUrl.trim())) {
+    errors.metricsUrl = '需要以 http:// 或 https:// 开头'
+  }
+
   for (const target of normalizeTargets(config.targets)) {
     const message = validateTarget(target)
     if (message) {

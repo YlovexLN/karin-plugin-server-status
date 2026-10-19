@@ -9,6 +9,7 @@ import type { Config, DeviceLayout } from '../types'
 import { normalizeTargets } from '../utils/targets'
 import { validateConfig } from '../utils/validation'
 import { NumberField, SelectField, SwitchField, TagField, TextFieldInput } from './fields'
+import { MonitorPicker } from './MonitorPicker'
 import { StatusCard } from './StatusCard'
 import { TargetField } from './TargetField'
 
@@ -16,10 +17,11 @@ interface ConfigPanelProps {
   device: DeviceLayout
 }
 
-type TabKey = 'basic' | 'push' | 'filter' | 'image'
+type TabKey = 'basic' | 'source' | 'push' | 'filter' | 'image'
 
 const tabs: Array<{ key: TabKey; label: string }> = [
   { key: 'basic', label: '基础' },
+  { key: 'source', label: '数据源' },
   { key: 'push', label: '推送' },
   { key: 'filter', label: '过滤' },
   { key: 'image', label: '截图' }
@@ -225,6 +227,62 @@ export const ConfigPanel = ({ device }: ConfigPanelProps) => {
         </>
       ) : null}
 
+      {tab === 'source' ? (
+        <>
+          <Card data-config-section>
+            <Card.Header className="p-5 pb-2">
+              <Card.Title className="text-base">指标接口</Card.Title>
+            </Card.Header>
+            <Card.Content className={`grid gap-5 p-5 pt-3 ${device === 'mobile' ? 'grid-cols-1' : 'md:grid-cols-2'}`}>
+              <SwitchField
+                help="启用后可监控未公开到状态页的监控项；状态页仍会同时读取，同一监控项只告警一次。"
+                label="同时启用指标接口"
+                value={config.metricsEnable}
+                onChange={(value) => setField('metricsEnable', value)}
+              />
+              <TextFieldInput
+                error={errors.metricsApiKey}
+                help="在面板的「API 密钥」页面生成，作为 Basic 认证的密码。"
+                label="API 密钥"
+                placeholder="留空表示不启用"
+                type="password"
+                value={config.metricsApiKey}
+                onChange={(value) => setField('metricsApiKey', value)}
+              />
+              <TextFieldInput
+                help="留空自动使用「面板地址」推导出的 /metrics。"
+                label="指标接口地址"
+                placeholder="http://127.0.0.1:3001/metrics"
+                value={config.metricsUrl}
+                onChange={(value) => setField('metricsUrl', value)}
+              />
+              <TextFieldInput
+                help="面板只校验密码，用户名可任意填写。"
+                label="认证用户名"
+                placeholder="server-status"
+                value={config.metricsApiUser}
+                onChange={(value) => setField('metricsApiUser', value)}
+              />
+            </Card.Content>
+          </Card>
+          <Card data-config-section>
+            <Card.Content className="p-5">
+              <MonitorPicker
+                connection={{
+                  statusUrl: config.statusUrl,
+                  statusSlug: config.statusSlug,
+                  metricsUrl: config.metricsUrl,
+                  metricsApiKey: config.metricsApiKey,
+                  metricsApiUser: config.metricsApiUser
+                }}
+                value={config.onlyMonitors}
+                onChange={(value) => setField('onlyMonitors', value)}
+              />
+            </Card.Content>
+          </Card>
+        </>
+      ) : null}
+
       {tab === 'push' ? (
         <Card data-config-section>
           <Card.Header className="flex flex-row items-center justify-between gap-3 p-5 pb-2">
@@ -300,15 +358,19 @@ export const ConfigPanel = ({ device }: ConfigPanelProps) => {
             <Card.Title className="text-base">监控项过滤</Card.Title>
           </Card.Header>
           <Card.Content className={`grid gap-5 p-5 pt-3 ${device === 'mobile' ? 'grid-cols-1' : 'md:grid-cols-2'}`}>
-            <TagField
-              help="留空表示全部监控；填写 ID 或名称片段。"
-              label="只监控这些"
-              placeholder="Web 主站"
+            <MonitorPicker
+              connection={{
+                statusUrl: config.statusUrl,
+                statusSlug: config.statusSlug,
+                metricsUrl: config.metricsUrl,
+                metricsApiKey: config.metricsApiKey,
+                metricsApiUser: config.metricsApiUser
+              }}
               value={config.onlyMonitors}
               onChange={(value) => setField('onlyMonitors', value)}
             />
             <TagField
-              help="命中即排除，优先级高于「只监控」。"
+              help="命中即排除，优先级高于「只监控」。可填 ID 或名称片段。"
               label="忽略这些"
               placeholder="测试环境"
               value={config.ignoreMonitors}
