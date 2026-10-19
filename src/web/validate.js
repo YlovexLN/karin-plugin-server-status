@@ -6,6 +6,7 @@
  */
 
 import { defaultConfig } from '../config.js'
+import { normalizeTargets, validateTargetList } from '../target.js'
 
 const NUMERIC_RULES = {
   interval: { min: 30, max: Number.MAX_SAFE_INTEGER },
@@ -39,6 +40,18 @@ export const validateConfigPatch = (input) => {
     }
 
     const def = defaultConfig[key]
+
+    /** targets 支持字符串与对象两种写法，统一归一化为对象后落盘 */
+    if (key === 'targets') {
+      const targetErrors = validateTargetList(value)
+      if (targetErrors.length) {
+        errors.push(...targetErrors)
+        continue
+      }
+      patch[key] = normalizeTargets(value)
+      continue
+    }
+
     if (Array.isArray(def)) {
       if (!Array.isArray(value) || value.some((item) => typeof item !== 'string')) {
         errors.push(`${key} 必须是字符串数组`)

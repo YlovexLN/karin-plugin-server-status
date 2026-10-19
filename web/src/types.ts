@@ -1,3 +1,20 @@
+/** 推送场景：群聊 / 私聊 */
+export type PushScene = 'group' | 'friend'
+
+/**
+ * 推送目标
+ * - `peer` 在群聊下是群号，在私聊下是 QQ 号
+ * - 字符串写法（`group:123456`）在读取时会被后端归一化为该结构
+ */
+export interface PushTarget {
+  scene: PushScene
+  peer: string
+  /** 群名 / 备注名，仅用于展示 */
+  name?: string
+  /** 指定推送使用的 Bot；为空时用第一个在线 Bot */
+  selfId?: string
+}
+
 /** 插件配置结构，与 src/config.js 的 defaultConfig 保持一致 */
 export interface Config {
   enable: boolean
@@ -5,7 +22,7 @@ export interface Config {
   statusSlug: string
   interval: number
   timeout: number
-  targets: string[]
+  targets: PushTarget[]
   fallbackToMaster: boolean
   notifyOnStart: boolean
   alertOnPending: boolean

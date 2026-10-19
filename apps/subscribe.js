@@ -12,13 +12,13 @@ import { getConfig, saveConfig } from '../src/config.js'
 import { StatusClient } from '../src/client.js'
 import { filterSnapshot } from '../src/engine.js'
 import { renderStatusImage } from '../src/render.js'
-import { describeTarget, parseTargetList, pushMessage, resolveTargets } from '../src/notify.js'
+import { describeTarget, normalizeTarget, parseTargetList, pushMessage, resolveTargets } from '../src/notify.js'
 
 /** 当前会话是否可作为推送目标 */
 const currentTarget = (e) => {
   const scene = e.contact.scene === 'group' ? 'group' : (e.contact.scene === 'friend' ? 'friend' : '')
   if (!scene) return null
-  return { scene, peer: String(e.contact.peer), name: e.contact.name || '' }
+  return normalizeTarget({ scene, peer: String(e.contact.peer), name: e.contact.name || '' })
 }
 
 /**
@@ -42,7 +42,7 @@ export const statusSubscribe = karin.command(
     }
 
     saveConfig({
-      targets: [...(cfg.targets || []), { scene: target.scene, peer: target.peer, name: target.name }]
+      targets: [...(cfg.targets || []), target]
     })
 
     await e.reply([

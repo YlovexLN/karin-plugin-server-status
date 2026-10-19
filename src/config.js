@@ -2,6 +2,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { karinPathBase, copyConfigSync, requireFileSync, logger } from 'node-karin'
+import { normalizeTargets } from './target.js'
 
 /** 插件包绝对路径 */
 const pluginDir = path.resolve(fileURLToPath(new URL('..', import.meta.url)))
@@ -152,7 +153,8 @@ export const getConfig = () => {
   cfg.width = Math.min(1600, Math.max(600, Number(cfg.width) || 700))
   cfg.deviceScaleFactor = Math.min(4, Math.max(1, Number(cfg.deviceScaleFactor) || 2))
   cfg.theme = cfg.theme === 'light' ? 'light' : 'dark'
-  if (!Array.isArray(cfg.targets)) cfg.targets = []
+  /** 目标统一归一化为 `{ scene, peer, name?, selfId? }` 对象，字符串写法在此被转换 */
+  cfg.targets = normalizeTargets(cfg.targets)
   if (!Array.isArray(cfg.onlyMonitors)) cfg.onlyMonitors = []
   if (!Array.isArray(cfg.ignoreMonitors)) cfg.ignoreMonitors = []
   return cfg

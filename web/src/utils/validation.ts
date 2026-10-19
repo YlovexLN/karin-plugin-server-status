@@ -1,4 +1,5 @@
 import type { Config } from '../types'
+import { normalizeTargets, sceneLabel, validateTarget } from './targets'
 
 export type ConfigErrors = Partial<Record<keyof Config, string>>
 
@@ -44,19 +45,13 @@ export const validateConfig = (config: Config | null): ConfigErrors => {
     errors.maxHeartbeats = '心跳数量需要在 10 - 100 之间'
   }
 
-  return errors
-}
-
-/** 校验单个推送目标格式，返回错误文案或 null */
-export const validateTarget = (value: string): string | null => {
-  const text = value.trim()
-  if (!text) return '目标不能为空'
-
-  const matched = text.match(/^(group|friend|private|群|私聊)[:：](.+)$/i)
-  if (matched) {
-    return matched[2].trim() ? null : '缺少群号或用户 ID'
+  for (const target of normalizeTargets(config.targets)) {
+    const message = validateTarget(target)
+    if (message) {
+      errors.targets = `${sceneLabel(target.scene)} ${target.peer}：${message}`
+      break
+    }
   }
 
-  // 裸字符串按私聊处理，允许纯数字或 selfId@userId
-  return /^[0-9@]+$/.test(text) ? null : '格式示例：group:123456、friend:10001、群:123456'
+  return errors
 }

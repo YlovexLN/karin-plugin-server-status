@@ -137,7 +137,7 @@ npm 包发布时由 `prepublishOnly` 自动构建并包含 `web-dist/`；直接 
 | `statusSlug` | string | `default` | 状态页 slug。`statusUrl` 为根地址时使用；留空回退 `default` |
 | `interval` | number | `60` | 检测间隔（秒）。任务每分钟触发一次，因此实际最小为 60 秒 |
 | `timeout` | number | `10000` | 单次请求超时（毫秒） |
-| `targets` | array | `[]` | 推送目标，留空则回退给机器人主人 |
+| `targets` | array | `[]` | 推送目标，每项为群聊或私聊；留空则回退给机器人主人 |
 | `fallbackToMaster` | boolean | `true` | `targets` 为空时是否推送给主人 |
 | `notifyOnStart` | boolean | `false` | 启动后首次检测到异常是否也推送 |
 | `alertOnPending` | boolean | `false` | 「待确认」（PENDING，重试中）是否告警 |
@@ -156,12 +156,21 @@ npm 包发布时由 `prepublishOnly` 自动构建并包含 `web-dist/`；直接 
 
 ### 推送目标格式
 
-`targets` 支持两种写法：
+在 WebUI 的「推送」页里，先选择 **群聊** 或 **私聊**，再填写对应号码：
+
+| 选择 | 填写 | 结果 |
+| --- | --- | --- |
+| 群聊 | 群号，如 `123456789` | 消息发送到该群 |
+| 私聊 | QQ 号，如 `10001` | 消息发送给该用户 |
+
+号码只接受数字，长度 4 - 12 位；同一个群号和一个相同数字的 QQ 号算两个不同目标。
+
+手动编辑 `config.json` 时，`targets` 支持两种写法（都会被自动归一化为对象）：
 
 ```jsonc
 {
   "targets": [
-    // 对象写法（推荐）
+    // 对象写法（推荐）：scene 为 group（群聊）或 friend（私聊），peer 填群号或 QQ 号
     { "scene": "group", "peer": "123456789", "name": "运维群" },
     { "scene": "friend", "peer": "10001" },
     // 指定由哪个 Bot 发送（多 Bot 时使用）
@@ -176,7 +185,7 @@ npm 包发布时由 `prepublishOnly` 自动构建并包含 `web-dist/`；直接 
 }
 ```
 
-也可以不填 `targets`，直接在群里发送 `#监控订阅` 让插件自动写入。
+也可以不填 `targets`，直接在群里或私聊中发送 `#监控订阅` 让插件自动写入。
 
 ### 示例配置
 

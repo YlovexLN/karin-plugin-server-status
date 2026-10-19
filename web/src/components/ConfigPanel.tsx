@@ -6,9 +6,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { getConfig, saveConfig, testPush } from '../api/config'
 import type { Config, DeviceLayout } from '../types'
-import { validateConfig, validateTarget } from '../utils/validation'
+import { normalizeTargets } from '../utils/targets'
+import { validateConfig } from '../utils/validation'
 import { NumberField, SelectField, SwitchField, TagField, TextFieldInput } from './fields'
 import { StatusCard } from './StatusCard'
+import { TargetField } from './TargetField'
 
 interface ConfigPanelProps {
   device: DeviceLayout
@@ -42,8 +44,10 @@ export const ConfigPanel = ({ device }: ConfigPanelProps) => {
     setLoading(true)
     try {
       const payload = await getConfig()
-      setConfig(payload.config)
-      setSavedConfig(payload.config)
+      /** 老配置里可能残留字符串写法（group:123456），统一归一化后再交给表单 */
+      const next = { ...payload.config, targets: normalizeTargets(payload.config.targets) }
+      setConfig(next)
+      setSavedConfig(next)
     } catch (error) {
       toast.danger('加载配置失败', {
         description: error instanceof Error ? error.message : '未知错误'
@@ -74,15 +78,7 @@ export const ConfigPanel = ({ device }: ConfigPanelProps) => {
   const dirty = useMemo(() => Boolean(config && savedConfig && !deepEqual(config, savedConfig)), [config, savedConfig])
   const errors = useMemo(() => validateConfig(config), [config])
   const hasError = Object.keys(errors).length > 0
-
-  const targetError = useMemo(() => {
-    if (!config) return undefined
-    for (const item of config.targets) {
-      const message = validateTarget(item)
-      if (message) return message
-    }
-    return undefined
-  }, [config])
+  const targetError = errors.targets
 
   const handleSave = async () => {
     if (!config || hasError || targetError) return
@@ -240,11 +236,8 @@ export const ConfigPanel = ({ device }: ConfigPanelProps) => {
           </Card.Header>
           <Card.Content className={`grid gap-5 p-5 pt-3 ${device === 'mobile' ? 'grid-cols-1' : 'md:grid-cols-2'}`}>
             <div className="md:col-span-2">
-              <TagField
+              <TargetField
                 error={targetError}
-                help="格式：group:123456、friend:10001、群:123456；裸字符串按私聊处理。"
-                label="推送目标"
-                placeholder="group:123456"
                 value={config.targets}
                 onChange={(value) => setField('targets', value)}
               />

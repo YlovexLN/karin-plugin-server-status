@@ -7,43 +7,9 @@
 
 import { karin, segment, logger, config } from 'node-karin'
 import { formatClock, formatDuration, formatTime } from './template.js'
-
-/**
- * 解析单个推送目标
- * @param {any} item 配置项
- * @returns {{ selfId: string, scene: 'group'|'friend', peer: string, name?: string }|null}
- */
-const parseTarget = (item) => {
-  if (!item) return null
-
-  if (typeof item === 'string') {
-    const text = item.trim()
-    if (!text) return null
-
-    const matched = text.match(/^(group|friend|private|群|私聊)[:：](.+)$/i)
-    if (matched) {
-      const scene = /group|群/i.test(matched[1]) ? 'group' : 'friend'
-      return { selfId: '', scene, peer: matched[2].trim() }
-    }
-
-    return { selfId: '', scene: 'friend', peer: text }
-  }
-
-  if (typeof item !== 'object') return null
-
-  const peer = String(item.peer ?? item.id ?? item.groupId ?? item.userId ?? '').trim()
-  if (!peer) return null
-
-  const sceneText = String(item.scene ?? item.type ?? '').toLowerCase()
-  const scene = sceneText === 'group' || sceneText === '群' ? 'group' : 'friend'
-
-  return {
-    selfId: item.selfId ? String(item.selfId) : '',
-    scene,
-    peer,
-    name: item.name ? String(item.name) : undefined
-  }
-}
+import { describeTarget, normalizeTargets, targetKey } from './target.js'
+/** 目标描述与解析规则统一由 target.js 提供，这里转出以保持既有引用路径可用 */
+export { describeTarget, normalizeScene, normalizeTarget, sceneLabel, targetKey } from './target.js'
 
 /**
  * 获取一个可用的 Bot ID
@@ -83,21 +49,10 @@ const masterTargets = () => {
  * @param {any[]} items 原始配置
  * @returns {Array<{ selfId: string, scene: 'group'|'friend', peer: string, name?: string }>}
  */
-export const parseTargetList = (items) => {
-  const list = []
-  const seen = new Set()
-
-  for (const item of items || []) {
-    const target = parseTarget(item)
-    if (!target) continue
-    const key = `${target.scene}:${target.peer}`
-    if (seen.has(key)) continue
-    seen.add(key)
-    list.push(target)
-  }
-
-  return list
-}
+export const parseTargetList = (items) => normalizeTargets(items).map((target) => ({
+  ...target,
+  selfId: target.selfId || ''
+}))
 
 /**
  * 解析全部推送目标（含主人回退）
@@ -106,11 +61,11 @@ export const parseTargetList = (items) => {
  */
 export const resolveTargets = (cfg) => {
   const list = parseTargetList(cfg.targets)
-  const seen = new Set(list.map((target) => `${target.scene}:${target.peer}`))
+  const seen = new Set(list.map(targetKey))
 
   if (list.length === 0 && cfg.fallbackToMaster !== false) {
     for (const target of masterTargets()) {
-      const key = `${target.scene}:${target.peer}`
+      const key = targetKey(target)
       if (seen.has(key)) continue
       seen.add(key)
       list.push(target)
@@ -127,15 +82,6 @@ export const resolveTargets = (cfg) => {
 export const toContact = (target) => {
   if (target.scene === 'group') return karin.contactGroup(target.peer)
   return karin.contactFriend(target.peer)
-}
-
-/**
- * 目标描述
- * @param {{ scene: 'group'|'friend', peer: string, name?: string }} target 目标
- */
-export const describeTarget = (target) => {
-  const scene = target.scene === 'group' ? '群聊' : '私聊'
-  return `${scene} ${target.name ? `${target.name}(${target.peer})` : target.peer}`
 }
 
 /**
