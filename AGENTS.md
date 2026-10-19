@@ -26,11 +26,18 @@
 `karin-plugin-server-status` 是一个 Karin 机器人框架插件：
 
 - 定时轮询**公开状态页 API**（兼容 Uptime Kuma 1.x / 2.x 的 `/api/status-page/*`）；
+- 可选叠加面板的 **`/metrics` 指标接口**（Prometheus 文本格式，需要一枚只读 API 密钥），用于监控**未公开**的监控项；
+  两个数据源同时启用，按监控项 ID 合并去重；
 - 监控项异常 / 恢复时主动推送 QQ 消息；
 - 附带一张仿状态页的监控截图（HTML → Karin 渲染器截图）。
 
 **非目标**：不实现登录、写入、删除、暂停监控等会改动面板的操作；不代替面板通知系统、不配置 Webhook、不保存面板账号；
 不做多面板聚合、告警升级、值班表。保持单面板、单进程、轻量。
+
+> **关于「不保存面板账号」的边界**：启用指标接口后，插件会保存一枚面板签发的 **API 密钥**
+> （`metricsApiKey`），用于读取 `/metrics`。它是**只读的监控读取凭据**，不是面板登录账号，
+> 无法执行写入 / 删除 / 暂停，也不携带用户名密码语义（面板只校验密钥，用户名可任意填）。
+> 这是本插件唯一保存的凭证，除此之外仍不保存任何面板账号。
 
 ## 2. 硬性约束
 
@@ -68,7 +75,7 @@
 ├─ index.js / web.config.js / package.json / pnpm-workspace.yaml
 ├─ apps/            task.js（每分钟任务）· status.js（状态/详情/检测）· subscribe.js（订阅/目标/测试/帮助）
 ├─ config/          默认 config.json，首次启动复制到 @karinjs
-├─ src/             config · target · client · engine · state · template · render · notify · monitor
+├─ src/             config · target · client · metrics · engine · state · template · render · notify · monitor
 │  └─ web/          paths · validate · api · static · router · index（mountWebUI）
 ├─ web/             index.html · vite.config.mjs · tsconfig.json · src/（页面/组件/API/主题/校验）
 ├─ docs/            README 预览图 preview*.png（随 npm 包发布，不放草稿）
@@ -90,24 +97,35 @@ apps/task.js（* * * * *）
        1. getConfig()                     热读配置
        2. enable / running / interval     跳过判断
        3. new StatusClient(cfg)           解析面板地址
-       4. getSnapshot()                   并行请求状态页 + 心跳
-       5. 失败 → handleSourceFailure()     记录失败，必要时告警并返回 ok:false
+       4. loadSnapshot(cfg)               状态页快照 +（可选）指标快照 → 合并去重
+       5. 两个数据源都失败 → handleSourceFailure()  记录失败，必要时告警并返回 ok:false
        6. 成功 → handleSourceRecover()     必要时推送恢复
        7. filterSnapshot() → evaluate()   过滤 + 状态机，写 StateStore
        8. 有事件 → renderStatusImage() → build*Text() → pushMessage()
        9. finally → state.flush()         落盘并释放 running
 ```
 
-`#监控状态` / `#监控详情` 直接拉取快照并渲染；`#监控检测` 调用 `runCheck({ force: true, manual: true })`。
+`#监控状态` / `#监控详情` 走同一个 `loadSnapshot()`；`#监控检测` 调用 `runCheck({ force: true, manual: true })`。
 
-### 状态页接口
+### 数据源
 
 | 接口 | 用途 | 解析位置 |
 | --- | --- | --- |
 | `GET /api/status-page/:slug` | 状态页标题、分组、监控项列表 | `client.getStatusPage()` |
 | `GET /api/status-page/heartbeat/:slug` | 最近 100 次心跳、24 小时可用率 | `client.getHeartbeats()` |
+| `GET /metrics` | 全部监控项（含未公开）的状态 / 24h 可用率 / 响应时间 | `metrics.getSnapshot()` |
 
-两个请求用 `Promise.all` 并发；任一失败都按「面板不可达」处理。接口无需登录，但要求状态页已发布、分组已公开。
+状态页两个请求用 `Promise.all` 并发，任一失败都按该数据源失败处理。状态页接口无需登录，但要求状态页已发布、分组已公开。
+
+指标接口是 **Prometheus 文本格式**，用 Basic 认证（密码 = 面板 API 密钥，用户名不校验）；
+启用条件为 `metricsEnable === true` 且 `metricsApiKey` 非空。`loadSnapshot()` 用 `Promise.allSettled` 并发两个数据源：
+
+- 两个都成功 → `mergeSnapshots(status, metrics)`，同 ID 以状态页那份为准（保留分组、心跳条、标题），指标独有的项追加到 `指标监控` 分组；
+- 只有一个成功 → 直接用成功的那个，另一个只记 `debug`（**不**计入面板掉线失败）；
+- 两个都失败 → 抛状态页那个错误，交由 `handleSourceFailure()` 处理。
+
+**指标接口的固有限制**（不要试图从别处补齐）：没有心跳历史（`heartbeats` / `allHeartbeats` 恒为 `[]`、`latest.time` 为 `null`）、
+没有分组名与描述、被暂停的监控项整项消失（对应 `prometheus.remove()`）、面板重启后要等该项首次心跳才重新出现。
 
 ### 模块依赖边界
 
@@ -115,7 +133,7 @@ apps/task.js（* * * * *）
 | --- | --- | --- |
 | `index.js` / `apps/*.js` | 是 | 入口日志；注册指令 / 任务 |
 | `src/config.js` | 是 | `karinPathBase`、`copyConfigSync`、`requireFileSync`、`logger` |
-| `src/client.js` / `target.js` / `engine.js` / `template.js` / `state.js` | 否 | 纯解析 / 目标解析 / 状态机 / HTML / 持久化，可脱离 Karin 单测 |
+| `src/client.js` / `metrics.js` / `target.js` / `engine.js` / `template.js` / `state.js` | 否 | 纯解析 / 指标解析 / 目标解析 / 状态机 / HTML / 持久化，可脱离 Karin 单测 |
 | `src/render.js` | 是 | `render`、`logger`、`karinPathHtml` |
 | `src/notify.js` | 是 | `karin`、`segment`、`logger`、`config` |
 | `src/monitor.js` | 是 | 编排，只用 `logger` |
@@ -124,8 +142,10 @@ apps/task.js（* * * * *）
 | `src/web/paths.js` / `validate.js` | 否 | 纯路径 / 纯校验 |
 | `web/**` / `test/*.mjs` | 否 | 浏览器代码；测试通过 `test/stub` 模拟 |
 
-- `src/client.js` / `target.js` / `engine.js` / `template.js` / `state.js` 不得 import `node-karin`。
+- `src/client.js` / `metrics.js` / `target.js` / `engine.js` / `template.js` / `state.js` 不得 import `node-karin`。
   需要 Karin 能力的代码只能放在 `render.js`、`notify.js`、`monitor.js`、`config.js`、`src/web/`、`apps/`、`index.js`。
+- `src/metrics.js` 只依赖 `node:buffer`（Basic 认证头）与 `src/client.js` 的 `resolveEndpoint`，不引用 `STATUS` 之外的业务模块；
+  解析函数（`parsePrometheusText` / `buildMetricsSnapshot` / `mergeSnapshots` / `resolveMetricsUrl`）都是纯函数，单测直接 import。
 - `notify.js` 只做发送，目标解析规则集中在 `src/target.js`；`notify.js` 转出 `describeTarget` / `normalizeTarget` 等以保持既有引用路径。
 - `web/` 禁止 import `node:*`、`node-karin` 或后端 `src/` 模块，因此 `web/src/utils/targets.ts` 是 `src/target.js` 的镜像，
   改一侧必须同步另一侧。
@@ -174,6 +194,9 @@ apps/task.js（* * * * *）
 | `theme` | 仅 `light` 保留，其他一律 `dark` |
 | `targets` | 归一化为 `{ scene, peer, name?, selfId? }` 数组，字符串写法在此转换，非法项丢弃 |
 | `onlyMonitors` / `ignoreMonitors` | 非数组 → `[]` |
+| `metricsEnable` | `=== true`，其余一律 `false`（不认字符串 `"true"`） |
+| `metricsUrl` / `metricsApiKey` | `String(v \|\| '').trim()` |
+| `metricsApiUser` | `String(v \|\| '').trim() \|\| 'server-status'` |
 
 - 布尔字段不做类型转换：JSON 里的 `"false"` 是字符串真值，必须写 `false`。
 - `repeatInterval` 不做下限收敛，`0` 或负数都表示关闭重复提醒。
@@ -184,6 +207,11 @@ apps/task.js（* * * * *）
 
 - `statusUrl`：可填根地址、`/status/:slug` 或 `/status-page/:slug` 完整地址、反向代理子路径；无协议时补 `http://`。
 - `statusSlug`：`statusUrl` 为根地址时使用，留空回退 `default`；URL 含状态页路径时，URL 中的 slug 优先。
+- `metricsEnable`：是否叠加 `/metrics` 数据源。仅 `true` 生效；为 `true` 但 `metricsApiKey` 为空时只 warn 一次并退回纯状态页。
+- `metricsUrl`：留空则由 `statusUrl` 推导（`resolveMetricsUrl()` 复用 `resolveEndpoint()` 剥掉状态页路径，再补 `/metrics`）；
+  填了则以它为准，缺协议补 `http://`，已带 `/metrics` 不重复追加；非法地址在 `MetricsClient` 构造时抛错。
+- `metricsApiKey`：面板生成的**只读**监控读取密钥，作为 Basic 认证的密码；插件唯一保存的凭证。
+- `metricsApiUser`：Basic 认证的用户名，面板**只校验密码**，默认 `server-status`，不影响鉴权结果。
 - `targets`：见第 8 节「推送目标」。
 - `enableImage`：`false` 时 `render*` 返回 `null`，走文本降级。
 - `timezone`：同时影响截图和文本时间；非法值静默回退到系统时区。
@@ -205,12 +233,15 @@ node test/preview.mjs   # 生成 dev/preview-*，不是测试
 ```
 
 - `pnpm check` 的 `node --check` 文件列表是**显式枚举**的；新增后端 `.js` 必须同步 `package.json` 的 `check` 脚本。
-- 当前基线：`test-engine` 32 通过、`test-api` 25 通过、`test-integration` 102 通过（含 WebUI 挂载、配置 API 与推送目标校验断言）。
+- 当前基线：`test-engine` 32 通过、`test-api` 61 通过、`test-integration` 122 通过（含指标接口解析 / 合并 / 客户端、WebUI 挂载、配置 API 与推送目标校验断言）。
 - 三个测试都用内置 `assert` 统计通过 / 失败，失败时 `process.exit(1)`；没有测试框架。
   - `test-engine`：状态迁移、重复提醒、PENDING / 维护、过滤、恢复条件、`notifyOnStart`；不依赖 Karin。
-  - `test-api`：接口解析、404 / 非 JSON / 超时、URL 规范化与 slug 优先级、子路径、空数据、UTC 时间解析；内置 mock HTTP 服务。
+  - `test-api`：接口解析、404 / 非 JSON / 超时、URL 规范化与 slug 优先级、子路径、空数据、UTC 时间解析；
+    Prometheus 文本解析、指标快照构造、两源合并去重、`resolveMetricsUrl()` 推导、`MetricsClient` 鉴权；
+    内置 mock HTTP 服务（同时提供状态页 JSON 与带 Basic 认证的 `/metrics`）。
   - `test-integration`：用 `test/stub/node-karin` 桩驱动「加载 → 检测 → 告警 → 监控恢复 → 指令 → 订阅写盘 → 面板掉线 → 无目标推送 →
-    静默检测 → 非法 statusUrl → WebUI 挂载 / 配置 API」全链路；结束 / 异常 / 中断时清理 `dev/.tmp-run`、桩模块与空 `node_modules`。
+    静默检测 → 非法 statusUrl → 指标接口开关 / 降级 / 监控项列表 → WebUI 挂载 / 配置 API」全链路；
+    结束 / 异常 / 中断时清理 `dev/.tmp-run`、桩模块与空 `node_modules`。
 - WebUI 后端（`src/web/validate.js`、`src/web/api.js`）的测试在集成测试末尾，直接调用 handler 并注入假 `req` / `res`。
 - 集成测试会把 `test/stub/node-karin` 临时装到 `node_modules/node-karin`；检测到真实 `node-karin` 会中止测试，不会删除它。
 - `test-integration` 会占用 `node_modules`、`dev/.tmp-run` 并执行 `process.chdir`；`test-api` 会启动本地 HTTP 服务。
@@ -408,11 +439,15 @@ node test/preview.mjs   # 生成 dev/preview-*，不是测试
 | `POST` | `/v1/config` | 是 | 校验后合并写入，返回最新配置 |
 | `GET` | `/v1/state` | 是 | 返回 `{ state, updatedAt }`；state.json 缺失时返回空状态 |
 | `POST` | `/v1/test-push` | 是 | 发送测试消息，返回 `{ total, success }` |
+| `POST` | `/v1/monitors` | 是 | 拉取可选监控项列表，返回 `{ source, monitors }`；供配置页勾选 |
 
 - 鉴权由 Karin 的 `authMiddleware` 完成，前端带 `Authorization: Bearer <accessToken>` 与 `x-user-id`。
 - 响应统一为 `{ code, data, message }`；前端 `unwrap()` 只接受 `code === 200`。
 - `POST /v1/config` 先过 `validateConfigPatch()`：未知字段、类型错误、越界值都返回 400，绝不信任前端。
 - 测试推送在没有目标且 `fallbackToMaster=false` 时返回 400；前端提示先配置推送目标。
+- `POST /v1/monitors` 优先用请求体里**尚未保存**的字段（`statusUrl` / `statusSlug` / `metricsUrl` / `metricsApiKey` / `metricsApiUser`），
+  缺省回落到已保存配置，便于「填完密钥先拉列表再保存」。有密钥走 `MetricsClient.listMonitors()`（`source: 'metrics'`，
+  能列出未公开项），没密钥退回状态页快照（`source: 'status-page'`，只有已公开项）；两者失败都返回 400 并附原因。
 
 ### 前端结构
 
@@ -457,6 +492,8 @@ pnpm preview:web    # 预览构建产物
 | --- | --- | --- |
 | 状态判断 / 重复提醒 / 恢复条件 | `src/engine.js` | `test/test-engine.mjs`、README 工作原理 |
 | 接口解析 / 超时 / 地址规范化 | `src/client.js` | `test/test-api.mjs`、README 配置说明 |
+| 指标接口地址 / Prometheus 解析 / 两源合并 | `src/metrics.js` | `test/test-api.mjs`、整合测试、README 数据源准备与配置表 |
+| 数据源编排 / 降级判断 | `src/monitor.js` 的 `loadSnapshot()` | `test/test-integration.mjs`、README 工作原理 |
 | 状态持久化 | `src/state.js` | 集成测试状态断言、本文件数据结构 |
 | 截图样式 / 文案排版 | `src/template.js` | `test/preview.mjs`、`docs/preview*.png` |
 | 渲染参数 | `src/render.js` | 集成测试 `setViewport` 断言 |
@@ -466,6 +503,7 @@ pnpm preview:web    # 预览构建产物
 | 指令 | `apps/*.js` | README 指令表、`#监控帮助`、集成测试计数 |
 | 定时任务 | `apps/task.js` | 集成测试 `__tasks` 断言 |
 | WebUI 配置字段 | `src/web/validate.js`、`web/src/types.ts`、`web/src/components/ConfigPanel.tsx` | README 配置表、`src/web/api.js` |
+| WebUI 监控项勾选 | `web/src/components/MonitorPicker.tsx`、`web/src/api/config.ts`、`src/web/api.js` 的 `listMonitorsHandler` | README「数据源」与「能改什么」 |
 | WebUI 样式 / 布局 | `web/src/**` | `pnpm typecheck:web`、`pnpm build:web` |
 | WebUI 路由 / 挂载 | `src/web/*`、`web/vite.config.mjs`、`web.config.js` | base / `WEB_PREFIX` / `page.url` 三处同步 |
 | 作者 / 仓库地址 | `web.config.js` 的 `info.author`、`package.json`、`web/src/references.ts` | README「安装」的 `git clone`、`pnpm typecheck:web` + `pnpm build:web`、`npm test` 不受影响 |
@@ -547,6 +585,23 @@ pnpm preview:web    # 预览构建产物
 - **布尔值陷阱**：JSON 中 `"false"` 是字符串真值；布尔配置必须写 `false`。
 - **URL slug 优先**：`statusUrl` 含状态页路径时，URL 中的 slug 优先于 `statusSlug`；根地址才使用配置，最后回退 `default`。
 
+### 指标接口
+
+- **没有心跳条**：`/metrics` 不提供逐次心跳，`heartbeats` / `allHeartbeats` 恒为 `[]`、`latest.time` 为 `null`；
+  截图里表现为空槽位与 `—`，详情图的平均响应 / 异常次数只能算全局值。不要用 `0` 冒充时间，否则会渲染成 1970。
+- **`metricsEnable` 要字面量 `true` 且密钥非空**：两者缺一就退回纯状态页，只 `debug` / 一次 `warn`，页面上不会报错。
+- **被暂停的监控项整项消失**：面板 `pauseMonitor` 会删除该监控的全部序列，插件只会「看不到它」，
+  不会收到状态变化事件；恢复暂停后要等首次心跳才重新出现。
+- **面板重启有延迟**：重启后 `/metrics` 里没有该监控项，直到它产生第一条心跳，可能短暂「少项」。
+- **限流 60 次 / 分钟**：`/metrics` 有上游硬编码的速率限制；每个检测周期只请求一次，不要把列表拉取塞进循环。
+- **Basic 认证只校验密码**：用户名（`metricsApiUser`）随意填，401 基本都是密钥错或未在面板生成密钥。
+- **部分失败 ≠ 面板掉线**：只有一个数据源失败时只记 `debug`，**不**累加 `source.failing`，也不会推「面板不可达」；
+  只有两个都失败才走 `handleSourceFailure()`。
+- **同 ID 以状态页为准**：合并时状态页那份保留分组、标题与心跳条，`/metrics` 只补状态 / 可用率 / 响应时间；
+  想改这些字段要去状态页侧设置。
+- **过滤仍然必要**：`/metrics` 返回面板里的**全部**监控项，`onlyMonitors` / `ignoreMonitors` 依然生效；
+  WebUI 的监控项勾选框只是把「手填片段」换成「拉列表勾选」，写进配置的仍是 ID 数组。
+
 ### 推送与渲染
 
 - **没有 targets**：`fallbackToMaster=false` 且 targets 为空时只 warn 并返回 0，检测继续。
@@ -620,8 +675,10 @@ pnpm preview:web    # 预览构建产物
 
 - [ ] `pnpm check` 通过（后端 `node --check` + 前端 `tsc`）。
 - [ ] `pnpm build:web` 通过，`web-dist/index.html` 与 assets 已生成。
-- [ ] `pnpm test` 全部通过（engine 32 / api 25 / integration 102）。
+- [ ] `pnpm test` 全部通过（engine 32 / api 61 / integration 122）。
 - [ ] 配置项已同步 `defaultConfig`、`config/config.json`、README、本文件、`src/web/validate.js` 与 `web/src/types.ts`。
+- [ ] 指标接口改动已同步 `src/metrics.js`、`src/monitor.js` 的 `loadSnapshot()`、`POST /v1/monitors`、
+      `web/src/components/MonitorPicker.tsx`、README「数据源准备」与两个测试脚本。
 - [ ] 指令已同步帮助文案、README、集成测试计数；状态字段已同步初始值、`load()` 默认值与 JSDoc。
 - [ ] 纯逻辑模块没有 import `node-karin`；`web/` 没有 import `node:*` / `node-karin`。
 - [ ] 没有新增运行时依赖；前端依赖都在 `devDependencies`。
