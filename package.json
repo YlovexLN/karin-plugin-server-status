@@ -1,11 +1,22 @@
 {
   "name": "karin-plugin-server-status",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "description": "服务器状态监控告警插件：轮询状态页 API，服务异常时主动推送并附上监控状态截图",
   "type": "module",
   "main": "index.js",
   "license": "GPL-3.0-only",
-  "author": "karin-plugin-server-status contributors",
+  "author": {
+    "name": "YlovexLN",
+    "url": "https://github.com/YlovexLN/"
+  },
+  "homepage": "https://github.com/YlovexLN/karin-plugin-server-status",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/YlovexLN/karin-plugin-server-status.git"
+  },
+  "bugs": {
+    "url": "https://github.com/YlovexLN/karin-plugin-server-status/issues"
+  },
   "keywords": [
     "karin",
     "karin-plugin",

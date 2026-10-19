@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 
 import { ThemeToggle } from '../components/ThemeToggle'
-import { KKK_REPO } from '../references'
+import { AUTHOR_HOME, AUTHOR_NAME, KKK_REPO, PLUGIN_REPO } from '../references'
 
 const navItems = [
   { key: 'config', label: '配置管理', to: '/server-status/assets/config', icon: Settings },
@@ -74,6 +74,27 @@ export const MobileLayout = () => {
               })}
             </nav>
             <p className="mt-auto text-[11px] text-default-400">配置保存后即时生效 · GPL-3.0-only</p>
+            <p className="mt-1 text-[11px] text-default-400">
+              作者{' '}
+              <a
+                className="inline-flex items-center gap-1 transition-colors hover:text-primary"
+                href={AUTHOR_HOME}
+                target="_blank"
+                rel="noreferrer noopener"
+              >
+                {AUTHOR_NAME}
+                <ExternalLink className="size-3" aria-hidden="true" />
+              </a>
+            </p>
+            <a
+              className="mt-1 inline-flex items-center gap-1 text-[11px] text-default-400 transition-colors hover:text-primary"
+              href={PLUGIN_REPO}
+              target="_blank"
+              rel="noreferrer noopener"
+            >
+              插件仓库
+              <ExternalLink className="size-3" aria-hidden="true" />
+            </a>
             <a
               className="mt-1 inline-flex items-center gap-1 text-[11px] text-default-400 transition-colors hover:text-primary"
               href={KKK_REPO}

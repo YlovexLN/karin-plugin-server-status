@@ -2,7 +2,7 @@ import { ExternalLink, Info, Server, Settings } from 'lucide-react'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 
 import { ThemeToggle } from '../components/ThemeToggle'
-import { KKK_REPO } from '../references'
+import { AUTHOR_HOME, AUTHOR_NAME, KKK_REPO, PLUGIN_REPO } from '../references'
 
 const navItems = [
   { key: 'config', label: '配置管理', to: '/server-status/assets/config', icon: Settings },
@@ -50,8 +50,31 @@ export const DesktopLayout = () => {
 
         <div className="mt-auto border-t border-default-100 p-4 text-[11px] leading-relaxed text-default-400">
           <p>配置保存后即时生效</p>
+          <p className="mt-0.5">
+            作者{' '}
+            <a
+              className="inline-flex items-center gap-1 transition-colors hover:text-primary"
+              href={AUTHOR_HOME}
+              target="_blank"
+              rel="noreferrer noopener"
+            >
+              {AUTHOR_NAME}
+              <ExternalLink className="size-3" aria-hidden="true" />
+            </a>
+          </p>
+          <p className="mt-0.5">
+            <a
+              className="inline-flex items-center gap-1 transition-colors hover:text-primary"
+              href={PLUGIN_REPO}
+              target="_blank"
+              rel="noreferrer noopener"
+            >
+              插件仓库
+              <ExternalLink className="size-3" aria-hidden="true" />
+            </a>
+          </p>
           <a
-            className="inline-flex items-center gap-1 transition-colors hover:text-primary"
+            className="mt-0.5 inline-flex items-center gap-1 transition-colors hover:text-primary"
             href={KKK_REPO}
             target="_blank"
             rel="noreferrer noopener"
@@ -59,7 +82,7 @@ export const DesktopLayout = () => {
             参考 kkk · 鸣谢
             <ExternalLink className="size-3" aria-hidden="true" />
           </a>
-          <p>GPL-3.0-only</p>
+          <p className="mt-0.5">GPL-3.0-only</p>
         </div>
       </aside>
 

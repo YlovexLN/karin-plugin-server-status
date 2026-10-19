@@ -2,7 +2,7 @@ import { Card, Description } from '@heroui/react'
 import { ExternalLink, Heart, Link2, ShieldCheck, Zap } from 'lucide-react'
 import { useEffect } from 'react'
 
-import { KKK_REPO, UPTIME_KUMA_REPO } from '../references'
+import { AUTHOR_HOME, AUTHOR_NAME, KKK_REPO, PLUGIN_REPO, UPTIME_KUMA_REPO } from '../references'
 
 const features = [
   {
@@ -131,9 +131,32 @@ export const AboutPanel = () => {
       </Card>
 
       <Card>
-        <Card.Content className="flex items-center gap-2 p-4 text-xs text-default-500">
-          <Link2 className="size-4" aria-hidden="true" />
-          karin-plugin-server-status contributors · GPL-3.0-only
+        <Card.Content className="p-4">
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-default-500">
+            <Link2 className="size-4 shrink-0" aria-hidden="true" />
+            <span>作者</span>
+            <a
+              className="inline-flex items-center gap-1 font-medium transition-colors hover:text-primary"
+              href={AUTHOR_HOME}
+              target="_blank"
+              rel="noreferrer noopener"
+            >
+              {AUTHOR_NAME}
+              <ExternalLink className="size-3" aria-hidden="true" />
+            </a>
+            <span aria-hidden="true">·</span>
+            <a
+              className="inline-flex items-center gap-1 transition-colors hover:text-primary"
+              href={PLUGIN_REPO}
+              target="_blank"
+              rel="noreferrer noopener"
+            >
+              插件仓库
+              <ExternalLink className="size-3" aria-hidden="true" />
+            </a>
+            <span aria-hidden="true">·</span>
+            <span>GPL-3.0-only</span>
+          </div>
         </Card.Content>
       </Card>
     </div>

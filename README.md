@@ -66,7 +66,7 @@ karin-plugin-server-status/
 
 ```bash
 cd Karin/plugins
-git clone https://github.com/your-name/karin-plugin-server-status.git
+git clone https://github.com/YlovexLN/karin-plugin-server-status.git
 ```
 
 也可以直接把整个文件夹复制到 `plugins/karin-plugin-server-status`。
@@ -87,12 +87,18 @@ pnpm add @karinjs/plugin-puppeteer -w
 
 插件自带一个 React 配置管理页，既可以嵌在 Karin WebUI 的插件配置里，也可以直接在浏览器打开。
 
+内嵌入口上方由 Karin 渲染的标题与说明文字来自 `web.config.js` 的 `page.title` / `page.description`；
+说明文字末尾注明了出处：本插件管理页面参考自
+[ikenxuan/karin-plugin-kkk](https://github.com/ikenxuan/karin-plugin-kkk) 自带的配置管理页面。
+
 ### 打开方式
 
 - **Karin WebUI 内嵌**：进入「插件管理 → 服务器状态监控 → 配置」，页面会在 iframe 中加载；需要 Karin `>= 1.16.1`。
 - **浏览器独立打开**：`http://<Karin 地址>:<端口>/server-status/assets/config`。
 
 两个入口共用同一套配置 API，保存后即时生效，无需重启 Karin。
+
+独立打开时侧边栏底部与「关于」页会展示本项目的作者、仓库入口与参考项目链接。
 
 ### 登录
 
@@ -359,4 +365,4 @@ node test/test-integration.mjs # 集成冒烟测试（含 WebUI 挂载与配置 
 
 [GPL-3.0-only](./LICENSE)
 
-Copyright (C) 2026 karin-plugin-server-status contributors
+Copyright (C) 2026 YlovexLN

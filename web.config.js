@@ -28,7 +28,9 @@ export const webConfig = defineConfig({
     version: pkg.version,
     author: [
       {
-        name: 'karin-plugin-server-status contributors'
+        name: 'YlovexLN',
+        home: 'https://github.com/YlovexLN/karin-plugin-server-status/',
+        avatar: 'https://github.com/YlovexLN.png'
       }
     ]
   },
@@ -37,7 +39,7 @@ export const webConfig = defineConfig({
       ? 'http://localhost:5176/server-status/assets/karin-config'
       : '/server-status/assets/karin-config',
     title: '服务器状态监控配置',
-    description: '配置监控地址、推送目标、过滤规则与截图选项'
+    description: '配置监控地址、推送目标、过滤规则与截图选项（本插件管理页面参考自 kkk 插件自带的配置管理页面）'
   }
 })
 

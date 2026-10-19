@@ -88,7 +88,7 @@ const fetchJson = async (url, timeout) => {
       signal: controller.signal,
       headers: {
         accept: 'application/json',
-        'user-agent': 'karin-plugin-server-status/1.0.0'
+        'user-agent': 'karin-plugin-server-status/0.0.1'
       }
     })
 
