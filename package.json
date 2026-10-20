@@ -53,6 +53,7 @@
     "index.js",
     "apps",
     "src",
+    "assets",
     "config",
     "docs",
     "web-dist",

@@ -321,7 +321,13 @@ npm 包发布时由 `prepublishOnly` 自动构建并包含 `web-dist/`；直接 
 
 **图片里的中文是方块？**
 
-渲染器所在环境缺少中文字体。Linux 可安装 `fonts-noto-cjk`：
+插件已内置一份中文字体子集（`assets/fonts/`，Noto Sans SC，覆盖 GB2312 与拉丁字符），渲染时会自动内联到截图页面，
+因此**正常情况下不需要在宿主机装任何中文字体**，Docker 与精简 Linux 镜像也能直接出图。
+
+如果仍然出现方块，说明内置字体文件缺失（例如打包时漏掉了 `assets/` 目录）。可以任选一种方式：
+
+1. 重新安装插件，确认 `assets/fonts/NotoSansSC-Regular.woff2` 与 `NotoSansSC-Bold.woff2` 存在；
+2. 给宿主机装上中文字体，插件会自动回退到系统字体：
 
 ```bash
 apt install -y fonts-noto-cjk

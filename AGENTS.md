@@ -74,6 +74,7 @@
 .
 ├─ index.js / web.config.js / package.json / pnpm-workspace.yaml
 ├─ apps/            task.js（每分钟任务）· status.js（状态/详情/检测）· subscribe.js（订阅/目标/测试/帮助）
+├─ assets/fonts/    内置中文字体 Noto Sans SC 子集（Regular / Bold）+ OFL 许可，随包发布
 ├─ config/          默认 config.json，首次启动复制到 @karinjs
 ├─ src/             config · target · client · metrics · engine · state · template · render · notify · monitor
 │  └─ web/          paths · validate · api · static · router · index（mountWebUI）
@@ -233,7 +234,7 @@ node test/preview.mjs   # 生成 dev/preview-*，不是测试
 ```
 
 - `pnpm check` 的 `node --check` 文件列表是**显式枚举**的；新增后端 `.js` 必须同步 `package.json` 的 `check` 脚本。
-- 当前基线：`test-engine` 56 通过、`test-api` 61 通过、`test-integration` 122 通过（含指标接口解析 / 合并 / 客户端、WebUI 挂载、配置 API 与推送目标校验断言）。
+- 当前基线：`test-engine` 56 通过、`test-api` 61 通过、`test-integration` 128 通过（含指标接口解析 / 合并 / 客户端、WebUI 挂载、配置 API 与推送目标校验断言，以及内置中文字体注入断言）。
 - 三个测试都用内置 `assert` 统计通过 / 失败，失败时 `process.exit(1)`；没有测试框架。
   - `test-engine`：状态迁移、重复提醒、PENDING / 维护、过滤、恢复条件、`notifyOnStart`；不依赖 Karin。
   - `test-api`：接口解析、404 / 非 JSON / 超时、URL 规范化与 slug 优先级、子路径、空数据、UTC 时间解析；
@@ -398,9 +399,19 @@ node test/preview.mjs   # 生成 dev/preview-*，不是测试
 
 ### 渲染（render.js）
 
-- 调用 `render.render({ file, name: 'server-status', type: 'png', encoding: 'base64', fullPage: true, setViewport: { width, height: 900, deviceScaleFactor }, pageGotoParams: { waitUntil: 'networkidle2', timeout: 20000 } })`。
+- 调用 `render.render({ file, name: 'server-status', type: 'png', encoding: 'base64', fullPage: true, setViewport: { width, height: VIEWPORT_MIN_HEIGHT, deviceScaleFactor }, pageGotoParams: { waitUntil: 'networkidle2', timeout: 20000 } })`。
 - **视窗宽度 = `cfg.width + 56`**：模板 `body` 左右各 28px，少加会裁掉右侧。
+- **视窗高度取小值（`VIEWPORT_MIN_HEIGHT = 100`）**：`fullPage` 只把视窗向上扩展到内容高度、不会收缩到比它更矮，
+  所以视窗高度就是输出图片的高度下限；写大了（曾为 `900`）会让内容不足的页面（详情图仅约 310px）底部留出大片空白。
+  模板中无 `vh` / `vw` 单位，改小不影响排版；比它高的页面仍由 `fullPage` 撑开。
 - 返回值可能是数组，取 `[0]`；统一转成不含 `data:` 前缀的 base64。
+- **内置中文字体注入**：`FONT_DIR` 指向插件根目录的 `assets/fonts/`，`FONT_FACES` 列出
+  `NotoSansSC-Regular.woff2`（400）与 `NotoSansSC-Bold.woff2`（700）。`buildFontStyle()` 用
+  `pathToFileURL()` 把字体文件转成**绝对 `file://` URL** 再拼 `@font-face`，`injectFontStyle()` 在 `</head>` 前插入
+  `<style>…</style>`。族名 `FONT_FAMILY`（`'ServerStatus CJK'`）定义在 `template.js` 并排在其字体栈最前面。
+  - 必须用绝对 `file://` URL：渲染器加载的是 `karinPathHtml` 下的临时 HTML，与插件目录不同级，相对路径取不到字体。
+  - 字体文件不存在时 `buildFontStyle()` 返回 `''`、`injectFontStyle()` 原样返回，静默回退系统字体栈，**不能报错**。
+  - 字体不能走 data URL 内联：两份子集内联后 HTML 会到约 2.9 MB，远不如引用文件。
 - HTML 临时文件写在 `karinPathHtml` 下，文件名带 pid / 时间戳 / 随机串，`finally` 删除；不要写到插件目录。
 - 失败时状态图 `warn` 一次（含安装渲染器提示）后返回 `null`；详情图只 `debug` 后返回 `null`。
 - 渲染器可选；未安装 `@karinjs/plugin-puppeteer` 时不能中断检测，必须降级为文本。
@@ -610,9 +621,15 @@ pnpm preview:web    # 预览构建产物
 - **推送失败不影响状态**：单目标失败只记 error；`notifyCount` 已增加，恢复消息仍会发。
 - **`#监控检测` 结果**：按 `runCheck().notifications` 提示「通知已发送 / 部分失败 / 无目标」，不要退回固定文案。
 - **渲染器可选**：未安装 `@karinjs/plugin-puppeteer` 时返回 `null` 走文本，不能抛异常中断检测。
+- **视窗高度不是「画布高度」**：`fullPage` 只向上扩展、不向下收缩，`setViewport.height` 就是图片高度的下限。
+  改回大值（如 `900`）会让详情图这类矮页面底部多出大片空白；宽度则不受影响，始终由内容决定。
 - **临时文件**：写在 `karinPathHtml`，`finally` 删除；不要写到插件目录。
 - **warn 只一次**：`render.js` 的 `warned` 是模块级；详情图失败只记 debug，不 warn。
-- **中文字体**：Linux 渲染器缺字体时中文变方块，装 `fonts-noto-cjk`（见 README FAQ）。
+- **中文字体**：插件自带 `assets/fonts/` 下的 Noto Sans SC 子集（Regular / Bold，GB2312 + 拉丁），
+  `render.js` 用 `pathToFileURL()` 生成绝对 `file://` 地址注入 `@font-face`，不依赖宿主机字体。
+  字体文件缺失时静默回退到模板里的系统字体栈，**不会**让渲染失败。改字体或改族名要同步
+  `template.js` 的 `FONT_FAMILY` 与 `render.js` 的 `FONT_FACES`；`package.json` 的 `files` 必须包含 `assets`。
+  许可为 SIL OFL-1.1，随字体一起分发 `assets/fonts/LICENSE-OFL.txt`，不要删除。
 - **时区格式化开销**：`buildBeats` 在设置 `timezone` 时对每根心跳条调用 `Intl.DateTimeFormat`；100 条时明显变慢。
 
 ### WebUI
@@ -656,9 +673,9 @@ pnpm preview:web    # 预览构建产物
   **不要主动打包**，也不要把归档当成改动的默认收尾步骤。
   真要验证打包时，临时脚本放 `dev/.tmp-*/`、产物落 `dev/`，验证完删掉临时脚本；
   已生成的归档与 `dev/dist/` 的去留交给用户决定，不要自行删除或覆盖。
-- `files` 决定发布内容：`index.js`、`apps`、`src`、`config`、`docs`、`web-dist`、`web.config.js`、`README.md`、`LICENSE`；
-  新增顶层目录 / 文件要同步。`karin.files` 当前为 `config`、`data`；`karin.web` 指向 `./web.config.js`；
-  `karin.apps` 为 `["apps"]`，Karin 自动加载，不要在 `index.js` 手动注册指令 / 任务。
+- `files` 决定发布内容：`index.js`、`apps`、`src`、`assets`、`config`、`docs`、`web-dist`、`web.config.js`、`README.md`、`LICENSE`；
+  新增顶层目录 / 文件要同步。`assets` 里是中文字体，漏掉它会让中文变方块。`karin.files` 当前为 `config`、`data`；
+  `karin.web` 指向 `./web.config.js`；`karin.apps` 为 `["apps"]`，Karin 自动加载，不要在 `index.js` 手动注册指令 / 任务。
 - 生产 `page.url` 是 `/server-status/assets/karin-config`，`NODE_ENV=development` 时指向 Vite dev server。
 - `prepublishOnly` 会执行 `pnpm build:web`，因此 `web-dist/` 虽被 git 忽略仍会进 npm 包；发布前先构建并检查产物。
   直接 `git clone` 的源码安装没有 `web-dist/`，需要用户自行构建（README 已说明）。
@@ -675,7 +692,8 @@ pnpm preview:web    # 预览构建产物
 
 - [ ] `pnpm check` 通过（后端 `node --check` + 前端 `tsc`）。
 - [ ] `pnpm build:web` 通过，`web-dist/index.html` 与 assets 已生成。
-- [ ] `pnpm test` 全部通过（engine 56 / api 61 / integration 122）。
+- [ ] `pnpm test` 全部通过（engine 56 / api 61 / integration 128）。
+- [ ] 内置字体相关：`assets/fonts/` 下两个 woff2 与 `LICENSE-OFL.txt` 都在，`files` 含 `assets`，README FAQ 与第 13 节「中文字体」一致。
 - [ ] 配置项已同步 `defaultConfig`、`config/config.json`、README、本文件、`src/web/validate.js` 与 `web/src/types.ts`。
 - [ ] 指标接口改动已同步 `src/metrics.js`、`src/monitor.js` 的 `loadSnapshot()`、`POST /v1/monitors`、
       `web/src/components/MonitorPicker.tsx`、README「数据源准备」与两个测试脚本。

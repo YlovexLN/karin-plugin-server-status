@@ -8,6 +8,14 @@
 
 import { STATUS } from './client.js'
 
+/**
+ * 内置中文字体的族名
+ *
+ * 与 `render.js` 注入的 `@font-face` 必须一致，因此定义在这里由两侧共用。
+ * 字体文件缺失时这个族名不会被定义，浏览器自动回退到后面的系统字体。
+ */
+export const FONT_FAMILY = 'ServerStatus CJK'
+
 /** 状态展示信息 */
 export const STATUS_META = Object.freeze({
   [STATUS.DOWN]: { key: 'down', label: '故障', en: 'Down', color: '#dc3545', icon: 'times-circle' },
@@ -244,10 +252,11 @@ const baseCss = (theme) => {
   html, body {
     background: ${vars.bg};
     color: ${vars.text};
-    font-family: "Twemoji Country Flags", BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue",
-      Arial, "Noto Sans", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC",
-      "WenQuanYi Micro Hei", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol",
-      "Noto Color Emoji";
+    /* 内置字体排在最前：有它就不再依赖宿主机装中文字体；缺失时自动回退到后面的系统字体栈 */
+    font-family: "${FONT_FAMILY}", "Twemoji Country Flags", BlinkMacSystemFont, "Segoe UI", Roboto,
+      "Helvetica Neue", Arial, "Noto Sans", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei",
+      "Noto Sans CJK SC", "WenQuanYi Micro Hei", sans-serif, "Apple Color Emoji", "Segoe UI Emoji",
+      "Segoe UI Symbol", "Noto Color Emoji";
     font-size: 16px;
     line-height: 1.5;
     -webkit-font-smoothing: antialiased;
